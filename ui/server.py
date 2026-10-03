@@ -8,6 +8,7 @@ Requires: sudo apt install python3-aiohttp python3-yaml
 import asyncio
 import copy
 import json
+import math
 import os
 import re
 import shutil
@@ -25,6 +26,22 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 STATIC_DIR = Path(__file__).resolve().parent
 LOWCUT_NAME = "__roomeq_lowcut"
+MODES = ("room", "flat", "night", "vocal")
+# Listening modes layered on top of the preset (never written to the YAML).
+# Night: no deep bass, softer treble, and a compressor that tames loud bursts and lifts quiet dialogue.
+# Vocal: speech range lifted, low end trimmed, so dialogue stands out from music and effects.
+MODE_FILTERS = {
+    "night": {
+        "__night_treble": {"type": "Biquad", "parameters": {"type": "Highshelf", "freq": 6000.0, "gain": -6.0, "slope": 6.0}},
+    },
+    "vocal": {
+        "__vocal_low": {"type": "Biquad", "parameters": {"type": "Lowshelf", "freq": 150.0, "gain": -4.0, "slope": 6.0}},
+        "__vocal_presence": {"type": "Biquad", "parameters": {"type": "Peaking", "freq": 2500.0, "gain": 4.0, "q": 0.9}},
+    },
+}
+NIGHT_COMPRESSOR = {"type": "Compressor", "parameters": {
+    "channels": 2, "attack": 0.025, "release": 1.0, "threshold": -30.0, "factor": 3.0,
+    "makeup_gain": 6.0, "soft_clip": True, "monitor_channels": [0, 1], "process_channels": [0, 1]}}
 # Touchscreen backlight; writable by the video group, so no sudo is needed.
 BACKLIGHT_DIR = os.environ.get("ROOMEQ_BACKLIGHT") or next(iter(sorted(Path("/sys/class/backlight").glob("*"))), None)
 SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never
@@ -39,11 +56,55 @@ DEFAULT_SETTINGS = {
     "background_file": None,
     "logo_file": None,
     "opacity": 0.9,
+    "auto_preamp": True,         # preamp follows the largest boost so boosts never clip
     "lowcut_freq": 80,
     "brightness": 100,           # touchscreen backlight, percent (10-100)
     "sleep_minutes": 5,          # touchscreen goes dark after this idle time; 0 = never
     "disabled": {},              # config path -> list of filter names switched off
 }
+
+
+def _biquad_coefs(kind, p, fs):
+    """RBJ cookbook coefficients (b0, b1, b2, a0, a1, a2), as CamillaDSP computes them."""
+    w = 2 * math.pi * p["freq"] / fs
+    cw, sw = math.cos(w), math.sin(w)
+    a = 10 ** ((p.get("gain") or 0) / 40)
+    if kind == "Peaking":
+        alpha = sw / (2 * p["q"]) if p.get("q") else sw * math.sinh(math.log(2) / 2 * (p.get("bandwidth") or 1) * w / sw)
+        return (1 + alpha * a, -2 * cw, 1 - alpha * a, 1 + alpha / a, -2 * cw, 1 - alpha / a)
+    if kind in ("Lowshelf", "Highshelf"):
+        if p.get("q"):
+            alpha = sw / (2 * p["q"])
+        else:
+            s = (p.get("slope") or 6) / 12
+            alpha = sw / 2 * math.sqrt((a + 1 / a) * (1 / s - 1) + 2)
+        sa = 2 * math.sqrt(a) * alpha
+        if kind == "Lowshelf":
+            return (a * ((a + 1) - (a - 1) * cw + sa), 2 * a * ((a - 1) - (a + 1) * cw), a * ((a + 1) - (a - 1) * cw - sa),
+                    (a + 1) + (a - 1) * cw + sa, -2 * ((a - 1) + (a + 1) * cw), (a + 1) + (a - 1) * cw - sa)
+        return (a * ((a + 1) + (a - 1) * cw + sa), -2 * a * ((a - 1) + (a + 1) * cw), a * ((a + 1) + (a - 1) * cw - sa),
+                (a + 1) - (a - 1) * cw + sa, 2 * ((a - 1) - (a + 1) * cw), (a + 1) - (a - 1) * cw - sa)
+    return None  # pass filters and others never boost
+
+
+def max_boost_db(filters, fs):
+    """Highest point of the summed magnitude response (20 Hz - 20 kHz) of the given biquads, in dB."""
+    coefs = [c for c in (_biquad_coefs((f.get("parameters") or {}).get("type"), f["parameters"], fs)
+                         for f in filters if f.get("type") == "Biquad" and (f.get("parameters") or {}).get("freq"))
+             if c is not None]
+    peak = 0.0
+    for i in range(240):
+        freq = 20 * 1000 ** (i / 239)
+        if freq >= fs / 2:
+            break
+        w = 2 * math.pi * freq / fs
+        total = 0.0
+        for b0, b1, b2, a0, a1, a2 in coefs:
+            nr, ni = b0 + b1 * math.cos(w) + b2 * math.cos(2 * w), -(b1 * math.sin(w) + b2 * math.sin(2 * w))
+            dr, di = a0 + a1 * math.cos(w) + a2 * math.cos(2 * w), -(a1 * math.sin(w) + a2 * math.sin(2 * w))
+            total += 10 * math.log10((nr * nr + ni * ni) / (dr * dr + di * di))
+        peak = max(peak, total)
+    return peak
 
 
 class Camilla:
@@ -96,8 +157,9 @@ class App:
         self.settings = self._load_settings()
         self.config_path = None
         self.base = None            # config as saved/edited by the user (no app additions)
-        self.bypass = False
-        self.lowcut = False
+        self.mode = "room"          # room | flat | night | vocal
+        self.bypass = False         # True in flat mode
+        self.lowcut = False         # "Sub off" button: 80 Hz high-pass on its own
         self.dirty = False
         self.history = []
         self._last_undo_key = None
@@ -168,7 +230,7 @@ class App:
         self.error = None
 
     def effective(self):
-        """Config actually sent to CamillaDSP: base plus bypass, low cut and switched-off filters."""
+        """Config actually sent to CamillaDSP: base plus mode, low cut and switched-off filters."""
         cfg = copy.deepcopy(self.base)
         if cfg is None:
             return None
@@ -183,7 +245,7 @@ class App:
                     continue
                 step = dict(step, names=names)
             steps.append(step)
-        if self.lowcut and not self.bypass:
+        if (self.lowcut or self.mode == "night") and not self.bypass:
             cfg.setdefault("filters", {})[LOWCUT_NAME] = {
                 "type": "BiquadCombo",
                 "parameters": {"type": "ButterworthHighpass",
@@ -194,8 +256,35 @@ class App:
             if chans is not None:
                 lc["channels"] = chans
             steps.insert(0, lc)
+        overlay = MODE_FILTERS.get(self.mode, {})
+        if overlay and not self.bypass:
+            cfg.setdefault("filters", {}).update(copy.deepcopy(overlay))
+            ov = {"type": "Filter", "names": list(overlay)}
+            chans = self._channels(cfg)
+            if chans is not None:
+                ov["channels"] = chans
+            steps.append(ov)
+        if self.mode == "night" and not self.bypass:
+            cfg["processors"] = dict(cfg.get("processors") or {}, __night_comp=copy.deepcopy(NIGHT_COMPRESSOR))
+            steps.append({"type": "Processor", "name": "__night_comp"})
         cfg["pipeline"] = steps
+        if self.settings.get("auto_preamp") and not self.bypass:
+            gain = self.auto_preamp_db(cfg)
+            for f in (cfg.get("filters") or {}).values():
+                if f.get("type") == "Gain":
+                    f.setdefault("parameters", {})["gain"] = gain
         return cfg
+
+    def auto_preamp_db(self, cfg=None):
+        """Preamp gain that cancels the largest boost of the filters currently in the pipeline."""
+        cfg = cfg or self.effective()
+        names = {n for st in cfg.get("pipeline") or [] if st.get("type") == "Filter" for n in st.get("names", [])}
+        flts = [f for n, f in (cfg.get("filters") or {}).items() if n in names]
+        try:
+            fs = int(cfg.get("devices", {}).get("samplerate", 48000))
+        except (TypeError, ValueError):
+            fs = 48000
+        return -round(max_boost_db(flts, fs) + 0.1, 1) if flts else 0.0
 
     def _channels(self, cfg):
         for step in self.base.get("pipeline") or []:
@@ -265,17 +354,21 @@ class App:
             "presets": presets,
             "filters": filters,
             "samplerate": samplerate,
+            "mode": self.mode,
             "bypass": self.bypass,
             "lowcut": self.lowcut,
+            "mode_filters": [] if self.bypass else list(copy.deepcopy(MODE_FILTERS.get(self.mode, {})).values()),
             "lowcut_freq": self.settings["lowcut_freq"],
             "dirty": self.dirty,
             "can_undo": bool(self.history),
             "settings": {k: self.settings[k] for k in
                          ("background", "background_file", "logo_file", "opacity",
-                          "brightness", "sleep_minutes")},
+                          "brightness", "sleep_minutes", "auto_preamp")},
             "sleep_choices": SLEEP_CHOICES,
             "has_backlight": BACKLIGHT_DIR is not None,
             "screen_on": self.screen_on,
+            "auto_preamp": bool(self.settings.get("auto_preamp")),
+            "auto_preamp_db": self.auto_preamp_db() if self.base and self.settings.get("auto_preamp") else None,
             "reconnecting": self.reconnecting,
             "error": self.error,
         }
@@ -363,15 +456,16 @@ class App:
             self.dirty = True
             await self.apply()
         elif cmd == "set_mode":
-            mode = msg["mode"]
-            self.bypass = mode == "flat"
-            if mode == "night":
-                self.lowcut = True
-            elif mode == "room":
-                self.lowcut = False
-            await self.apply()
+            if msg.get("mode") in MODES:
+                self.mode = msg["mode"]
+                self.bypass = self.mode == "flat"
+                await self.apply()
         elif cmd == "set_bypass":
             self.bypass = bool(msg["value"])
+            if self.bypass:
+                self.mode = "flat"
+            elif self.mode == "flat":
+                self.mode = "room"
             await self.apply()
         elif cmd == "set_lowcut":
             self.lowcut = bool(msg["value"])
@@ -405,6 +499,11 @@ class App:
                     self.settings[k] = msg["values"][k]
             if int(msg.get("values", {}).get("sleep_minutes", -1)) in SLEEP_CHOICES:
                 self.settings["sleep_minutes"] = int(msg["values"]["sleep_minutes"])
+            if "auto_preamp" in msg.get("values", {}):
+                self.settings["auto_preamp"] = bool(msg["values"]["auto_preamp"])
+                self.save_settings()
+                await self.apply()
+                return
             self.save_settings()
             await self.broadcast_state()
 

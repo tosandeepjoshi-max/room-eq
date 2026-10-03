@@ -88,6 +88,15 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .fcap::after{content:"";position:absolute;left:4px;right:4px;top:50%;height:2px;margin-top:-1px;background:#f5f7fa;border-radius:1px}
 .strip.sel .fcap::after{background:var(--coral)}
 .strip.pre .fcap::after{background:var(--cyan)}
+.strip.room{background:rgba(232,176,74,.05)}
+.strip.room .fcap::after{background:#e8b04a}
+.strip.auto .fader{cursor:default}
+.strip.auto .fcap{opacity:.55}
+.roomtog{flex:none;width:30px;margin:0 2px;border:1px dashed var(--line);border-radius:8px;background:transparent;color:var(--muted);font:700 10px var(--sans);letter-spacing:.14em;writing-mode:vertical-rl;cursor:pointer}
+.roomtog[aria-expanded=true]{border-color:#e8b04a;color:#e8b04a}
+.chip.room{border-style:dashed}
+.autorow{display:flex;align-items:center;gap:10px;font-size:13px;grid-column:1 / -1}
+.autorow span{color:var(--muted)}
 .sname{font-size:11px;font-weight:700;max-width:100%;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sfreq{font:10px var(--mono);color:var(--muted);white-space:nowrap}
 .detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end;border-top:1px solid var(--line);padding-top:10px;min-width:0}
@@ -224,7 +233,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   .plothead{display:none}
   .dbaxis span:nth-child(-n+2),.dbaxis span:nth-child(4){display:none}
   .mixer{padding:8px;gap:6px}
-  .strip{width:46px;padding:4px 0}
+  .strip{min-width:38px;padding:4px 0}
   .strip.pre{margin-right:4px}
   .fcap{width:34px;height:20px;margin:-10px 0 0 -17px}
   .sval{font-size:11px}
@@ -261,6 +270,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
       <button type="button" data-mode="room">Room EQ</button>
       <button type="button" data-mode="flat">Flat</button>
       <button type="button" data-mode="night">Night</button>
+      <button type="button" data-mode="vocal">Vocal</button>
     </div>
     <div class="preset">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#9aa6b5" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>
@@ -403,16 +413,17 @@ function send(obj) {
 function startDemo() {
   const bq = (type, freq, gain, extra) => ({ type: 'Biquad', parameters: { type, freq, gain, ...extra }, enabled: true });
   const filters = [
-    { name: 'preamp', type: 'Gain', parameters: { gain: -3 }, enabled: true },
-    { name: 'bass', ...bq('Lowshelf', 100, 3, { slope: 6 }) },
-    { name: 'peq low', ...bq('Peaking', 50, -4, { q: 2 }) },
-    { name: 'peq mid', ...bq('Peaking', 100, -2, { q: 2 }) },
-    { name: 'peq high', ...bq('Peaking', 200, 1.5, { q: 2 }) },
-    { name: 'treble', ...bq('Highshelf', 5000, -1, { slope: 6 }) },
+    { name: 'preamp', type: 'Gain', parameters: { gain: 0 }, enabled: true },
+    ...[[31, '31 Hz'], [63, '63 Hz'], [125, '125 Hz'], [250, '250 Hz'], [500, '500 Hz'], [1000, '1 kHz'],
+      [2000, '2 kHz'], [4000, '4 kHz'], [8000, '8 kHz'], [16000, '16 kHz']].map(([fr, n]) => ({ name: n, ...bq('Peaking', fr, 0, { q: 1.41 }) })),
+    { name: 'room 21', ...bq('Peaking', 20.9, -2.8, { q: 5 }) },
+    { name: 'room 40', ...bq('Peaking', 39.6, -4.7, { q: 5 }) },
+    { name: 'room 50', ...bq('Peaking', 50.1, -3.8, { q: 5 }) },
+    { name: 'room 67', ...bq('Peaking', 66.7, -6.9, { q: 5 }) },
   ];
   setModel({ type: 'state', config_name: 'room_eq.yml', presets: ['movie.yml', 'room_eq.yml'], filters, samplerate: 192000,
-    bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5 },
-    sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], has_backlight: true, screen_on: true });
+    mode: 'room', mode_filters: [], bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5 },
+    sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], has_backlight: true, screen_on: true, auto_preamp: true, auto_preamp_db: 0 });
   status = { state: 'Running', capture_rate: 192000, temp: 56, load: 12, clipped: 0 }; drawStatus();
   let t = 0;
   setInterval(() => {
@@ -434,10 +445,17 @@ function demoCommand(obj) {
       selected = `band ${i}`; m.dirty = true; break;
     }
     case 'remove_filter': m.filters = m.filters.filter((x) => x !== f); m.dirty = true; break;
-    case 'set_mode': m.bypass = obj.mode === 'flat'; if (obj.mode !== 'flat') m.lowcut = obj.mode === 'night'; break;
-    case 'set_bypass': m.bypass = obj.value; break;
+    case 'set_mode':
+      m.mode = obj.mode; m.bypass = obj.mode === 'flat';
+      m.mode_filters = { vocal: [{ type: 'Biquad', parameters: { type: 'Lowshelf', freq: 150, gain: -4, slope: 6 } },
+        { type: 'Biquad', parameters: { type: 'Peaking', freq: 2500, gain: 4, q: 0.9 } }],
+        night: [{ type: 'Biquad', parameters: { type: 'Highshelf', freq: 6000, gain: -6, slope: 6 } }] }[obj.mode] || [];
+      break;
+    case 'set_bypass': m.bypass = obj.value; m.mode = obj.value ? 'flat' : (m.mode === 'flat' ? 'room' : m.mode); m.mode_filters = []; break;
     case 'set_lowcut': m.lowcut = obj.value; break;
-    case 'settings': Object.assign(m.settings, obj.values); break;
+    case 'settings':
+      if ('auto_preamp' in obj.values) m.auto_preamp = obj.values.auto_preamp;
+      Object.assign(m.settings, obj.values); break;
     case 'save': m.dirty = false; break;
     case 'reconnect':
       m.reconnecting = true;
@@ -536,8 +554,10 @@ function totalResponse() {
     const r = filterDb(f, fs);
     for (let i = 0; i < tot.length; i++) tot[i] += r[i];
   }
-  if (model.lowcut) {
-    const r = filterDb({ type: 'BiquadCombo', parameters: { type: 'ButterworthHighpass', freq: model.lowcut_freq, order: 4 } }, fs);
+  const extra = [...(model.mode_filters || [])];
+  if (model.lowcut || model.mode === 'night') extra.push({ type: 'BiquadCombo', parameters: { type: 'ButterworthHighpass', freq: model.lowcut_freq, order: 4 } });
+  for (const f of extra) {
+    const r = filterDb(f, fs);
     for (let i = 0; i < tot.length; i++) tot[i] += r[i];
   }
   return tot;
@@ -572,13 +592,14 @@ function render() {
   if (!model) return;
   const key = model.filters.map((f) => `${f.name}|${f.enabled}|${kindOf(f)}`).join(';');
   drawHeader(); drawChips();
-  if (key !== stripsKey) { stripsKey = key; buildStrips(); }
-  if (key + '#' + selected !== detailKey) { detailKey = key + '#' + selected; buildDetail(); buildNodes(); }
+  const skey = key + '|' + showRoom + '|' + !!model.auto_preamp;
+  if (skey !== stripsKey) { stripsKey = skey; buildStrips(); }
+  if (skey + '#' + selected !== detailKey) { detailKey = skey + '#' + selected; buildDetail(); buildNodes(); }
   updateMixer(); drawCurve(); applySettings(); applyScreenSettings();
 }
 function select(name) { if (selected !== name) { selected = name; render(); } }
 function drawHeader() {
-  const mode = model.bypass ? 'flat' : model.lowcut ? 'night' : 'room';
+  const mode = model.mode || (model.bypass ? 'flat' : 'room');
   document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
   const sel = $('preset');
   const opts = model.presets.map((p) => `<option value="${esc(p)}">${esc(p.replace(/\.ya?ml$/, ''))}</option>`).join('');
@@ -592,11 +613,12 @@ function drawHeader() {
   $('bypass').setAttribute('aria-pressed', model.bypass);
   $('subcut').setAttribute('aria-pressed', model.lowcut);
   $('lcinfo').textContent = `Sub off cuts below ${model.lowcut_freq} Hz`;
-  $('plotinfo').textContent = model.bypass ? 'Bypassed' : model.lowcut ? `Low cut ${model.lowcut_freq} Hz` : 'Stereo · L+R';
+  $('plotinfo').textContent = { flat: 'Bypassed', night: 'Night · low & high cut · compressed', vocal: 'Vocal · speech lifted' }[mode]
+    || (model.lowcut ? `Low cut ${model.lowcut_freq} Hz` : 'Stereo · L+R');
 }
 function drawChips() {
   const html = model.filters.map((f) => `
-    <div class="chip${f.name === selected ? ' sel' : ''}${f.enabled ? '' : ' off'}" data-name="${esc(f.name)}" role="button" tabindex="0" aria-pressed="${f.name === selected}">
+    <div class="chip${f.name === selected ? ' sel' : ''}${f.enabled ? '' : ' off'}${isRoom(f) ? ' room' : ''}" data-name="${esc(f.name)}" role="button" tabindex="0" aria-pressed="${f.name === selected}">
       <button class="sw" type="button" role="switch" aria-checked="${f.enabled}" data-toggle="${esc(f.name)}" aria-label="${esc(f.name)} on"></button>
       <b>${esc(f.name)}</b><small>${chipInfo(f)}</small>
     </div>`).join('') +
@@ -608,26 +630,45 @@ function selFilter() { return model && model.filters.find((f) => f.name === sele
 
 /* ---------- fader bank ---------- */
 const capTop = (frac) => `calc(10px + (100% - 20px) * ${frac})`;
-function faderFilters() { return [...model.filters.filter((f) => f.type === 'Gain'), ...model.filters.filter((f) => f.type !== 'Gain')]; }
-function buildStrips() {
-  $('strips').innerHTML = faderFilters().map((f) => {
-    const [lo, hi] = gainRange(f), step = f.type === 'Gain' ? 10 : 5;
-    let ticks = '';
-    if (hasGain(f)) for (let v = lo; v <= hi; v += step) ticks += `<i class="tick${v === 0 ? ' zero' : ''}" style="top:${capTop((hi - v) / (hi - lo))}"></i>`;
-    return `<div class="strip${f.type === 'Gain' ? ' pre' : ''}${f.enabled ? '' : ' off'}" data-name="${esc(f.name)}">
+// Filters named "room ..." are the measured room correction: shown as a separate, collapsible group.
+const isRoom = (f) => /^room\b/i.test(f.name);
+let showRoom = false;
+try { showRoom = localStorage.getItem('roomeq.showRoom') === '1'; } catch (e) { /* storage unavailable */ }
+const autoPre = (f) => !!f && f.type === 'Gain' && !!model.auto_preamp;
+function stripHtml(f) {
+  const [lo, hi] = gainRange(f), step = f.type === 'Gain' ? 10 : 5;
+  let ticks = '';
+  if (hasGain(f)) for (let v = lo; v <= hi; v += step) ticks += `<i class="tick${v === 0 ? ' zero' : ''}" style="top:${capTop((hi - v) / (hi - lo))}"></i>`;
+  return `<div class="strip${f.type === 'Gain' ? ' pre' : ''}${isRoom(f) ? ' room' : ''}${autoPre(f) ? ' auto' : ''}${f.enabled ? '' : ' off'}" data-name="${esc(f.name)}">
       <span class="sval"></span>
       <div class="fader${hasGain(f) ? '' : ' none'}"${hasGain(f) ? ` role="slider" tabindex="0" aria-label="${esc(f.name)} gain" aria-valuemin="${lo}" aria-valuemax="${hi}"` : ''}>${ticks}${hasGain(f) ? '<div class="fcap"></div>' : ''}</div>
-      <span class="sname">${esc(f.name)}</span><span class="sfreq"></span>
+      <span class="sname">${esc(isRoom(f) ? f.name.replace(/^room\s*/i, '') : f.name)}</span><span class="sfreq"></span>
     </div>`;
-  }).join('');
+}
+function buildStrips() {
+  const pre = model.filters.filter((f) => f.type === 'Gain');
+  const tone = model.filters.filter((f) => f.type !== 'Gain' && !isRoom(f));
+  const room = model.filters.filter((f) => f.type !== 'Gain' && isRoom(f));
+  let html = [...pre, ...tone].map(stripHtml).join('');
+  if (room.length) {
+    html += `<button class="roomtog" type="button" id="roomtog" aria-expanded="${showRoom}" aria-label="${showRoom ? 'Hide' : 'Show'} room correction bands">ROOM ${room.length} ${showRoom ? '◂' : '▸'}</button>`;
+    if (showRoom) html += room.map(stripHtml).join('');
+  }
+  $('strips').innerHTML = html;
   $('strips').querySelectorAll('.strip').forEach((el) => bindFader(el));
+  if ($('roomtog')) $('roomtog').addEventListener('click', () => {
+    showRoom = !showRoom;
+    try { localStorage.setItem('roomeq.showRoom', showRoom ? '1' : '0'); } catch (e) { /* ignore */ }
+    stripsKey = ''; render();
+  });
 }
 function buildDetail() {
   const d = $('detail'), f = selFilter();
   if (!f) { d.innerHTML = '<p class="empty" style="grid-column:1 / -1">No filters yet. Tap + Band to add one.</p>'; return; }
   const p = f.parameters || {};
   let html = '';
-  if (f.type === 'Gain') html += '<p class="hint">Preamp lowers the whole signal to leave headroom for boosts.</p>';
+  if (f.type === 'Gain') html += `<div class="autorow"><button class="sw" type="button" role="switch" id="autopre" aria-checked="${!!model.auto_preamp}" aria-label="Auto preamp"></button><b>Auto preamp</b><span id="autoval"></span></div>
+    <p class="hint">${model.auto_preamp ? 'Follows the largest boost so boosts never clip.' : 'Lowers the whole signal to leave headroom for boosts.'}</p>`;
   if (hasFreq(f)) html += `<div class="ctl"><label for="fslider"><span>Freq</span><span id="fval"></span></label><input type="range" id="fslider" min="0" max="1000" step="1"></div>`;
   if (typeof p.q === 'number') html += `<div class="ctl"><label for="qslider"><span>Q</span><span id="qval"></span></label><input type="range" id="qslider" min="0" max="1000" step="1"></div>`;
   else if (typeof p.slope === 'number') html += `<div class="ctl"><label for="sslider"><span>Slope</span><span id="sval"></span></label><input type="range" id="sslider" min="1" max="12" step="0.5"></div>`;
@@ -638,23 +679,26 @@ function buildDetail() {
   on('fslider', (f, v) => setParam(f, 'freq', Math.round(20 * Math.pow(1000, v / 1000))));
   on('qslider', (f, v) => setParam(f, 'q', Math.round(0.3 * Math.pow(40, v / 1000) * 100) / 100));
   on('sslider', (f, v) => setParam(f, 'slope', v));
+  if ($('autopre')) $('autopre').addEventListener('click', () => send({ cmd: 'settings', values: { auto_preamp: !model.auto_preamp } }));
   if ($('remove')) $('remove').addEventListener('click', () => { if (confirm(`Remove ${selected}?`)) send({ cmd: 'remove_filter', name: selected }); });
 }
 function updateMixer() {
   $('strips').querySelectorAll('.strip').forEach((el) => {
     const f = model.filters.find((x) => x.name === el.dataset.name); if (!f) return;
     const p = f.parameters || {};
+    const g = autoPre(f) ? (model.auto_preamp_db ?? 0) : p.gain;
     el.classList.toggle('sel', f.name === selected);
-    el.querySelector('.sval').textContent = hasGain(f) ? fmtDb(p.gain) : '–';
-    el.querySelector('.sfreq').textContent = f.type === 'Gain' ? 'dB' : hasFreq(f) ? fmtHz(p.freq) : '';
+    el.querySelector('.sval').textContent = hasGain(f) ? fmtDb(g) : '–';
+    el.querySelector('.sfreq').textContent = f.type === 'Gain' ? (autoPre(f) ? 'auto' : 'dB') : hasFreq(f) && fmtHz(p.freq) !== f.name ? fmtHz(p.freq) : '';
     const cap = el.querySelector('.fcap');
     if (cap) {
       const [lo, hi] = gainRange(f);
-      cap.style.top = capTop((hi - clamp(p.gain, lo, hi)) / (hi - lo));
+      cap.style.top = capTop((hi - clamp(g, lo, hi)) / (hi - lo));
       const fd = el.querySelector('.fader');
-      fd.setAttribute('aria-valuenow', p.gain); fd.setAttribute('aria-valuetext', fmtDb(p.gain) + ' dB');
+      fd.setAttribute('aria-valuenow', g); fd.setAttribute('aria-valuetext', fmtDb(g) + ' dB');
     }
   });
+  if ($('autoval')) $('autoval').textContent = model.auto_preamp ? fmtDb(model.auto_preamp_db ?? 0) + ' dB' : 'off';
   const f = selFilter(); if (!f) return;
   const p = f.parameters || {};
   const set = (id, v) => { if ($(id) && document.activeElement !== $(id)) $(id).value = v; };
@@ -673,6 +717,7 @@ function bindFader(strip) {
   fd.addEventListener('pointerdown', (e) => {
     const f = filt(); if (!f) return;
     select(name);
+    if (autoPre(f)) return;   // auto preamp: the fader shows the value but cannot be dragged
     fd.setPointerCapture(e.pointerId); dragging = true; startY = e.clientY; startV = f.parameters.gain;
   });
   fd.addEventListener('pointermove', (e) => {
@@ -683,9 +728,10 @@ function bindFader(strip) {
   });
   const end = (e) => { if (fd.hasPointerCapture(e.pointerId)) fd.releasePointerCapture(e.pointerId); endDrag(); };
   fd.addEventListener('pointerup', end); fd.addEventListener('pointercancel', end);
-  fd.addEventListener('dblclick', () => setParam(filt(), 'gain', 0));
+  fd.addEventListener('dblclick', () => { if (!autoPre(filt())) setParam(filt(), 'gain', 0); });
   fd.addEventListener('keydown', (e) => {
     const f = filt(), [lo, hi] = gainRange(f);
+    if (autoPre(f)) return;
     const d = { ArrowUp: 0.5, ArrowRight: 0.5, ArrowDown: -0.5, ArrowLeft: -0.5, PageUp: 3, PageDown: -3 }[e.key];
     if (!d) return;
     e.preventDefault();

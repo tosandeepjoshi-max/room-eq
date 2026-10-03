@@ -37,6 +37,76 @@ filters:
     type: Gain
     parameters:
       gain: 0.0
+  31 Hz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 31.0
+      gain: 0.0
+      q: 1.41
+  63 Hz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 63.0
+      gain: 0.0
+      q: 1.41
+  125 Hz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 125.0
+      gain: 0.0
+      q: 1.41
+  250 Hz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 250.0
+      gain: 0.0
+      q: 1.41
+  500 Hz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 500.0
+      gain: 0.0
+      q: 1.41
+  1 kHz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 1000.0
+      gain: 0.0
+      q: 1.41
+  2 kHz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 2000.0
+      gain: 0.0
+      q: 1.41
+  4 kHz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 4000.0
+      gain: 0.0
+      q: 1.41
+  8 kHz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 8000.0
+      gain: 0.0
+      q: 1.41
+  16 kHz:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 16000.0
+      gain: 0.0
+      q: 1.41
   room 21:
     type: Biquad
     parameters:
@@ -71,6 +141,16 @@ pipeline:
   channels: null
   names:
   - preamp
+  - 31 Hz
+  - 63 Hz
+  - 125 Hz
+  - 250 Hz
+  - 500 Hz
+  - 1 kHz
+  - 2 kHz
+  - 4 kHz
+  - 8 kHz
+  - 16 kHz
   - room 21
   - room 40
   - room 50

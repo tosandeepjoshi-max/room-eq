@@ -176,8 +176,17 @@ How it works:
 - Commands from the page: `set_param`, `toggle_filter`, `add_band`,
   `remove_filter`, `set_mode` (room / flat / night), `set_bypass`,
   `set_lowcut`, `preset`, `save`, `undo`, `settings`, `reconnect`.
-- Modes: Room EQ = base; Flat = bypass; Night = base + low cut. The Bypass and
-  Sub off buttons map onto the same two flags.
+- Modes (2026-10-03): Room EQ = preset; Flat = bypass; Night = preset + 80 Hz
+  low cut + high shelf -6 dB at 6 kHz + compressor (threshold -30 dB, ratio 3,
+  makeup +6 dB); Vocal = preset + low shelf -4 dB at 150 Hz + peak +4 dB at
+  2.5 kHz Q 0.9. Mode filters are named __night_* / __vocal_* and never saved.
+  Bypass button = Flat; "Sub off" button = 80 Hz low cut on its own.
+- Auto preamp (setting `auto_preamp`, default on): the effective preamp is
+  minus the largest boost of all active filters (+0.1 dB margin), so boosts
+  never clip; the preamp fader shows "auto" and cannot be dragged.
+- Faders: filters named "room ..." are room correction, shown behind a ROOM
+  toggle (amber caps); the rest are the tone bank. rew_v1 has a 10-band tone
+  bank (31 Hz-16 kHz, Q 1.41, 0 dB) in front of the 4 room cuts.
 - If the YAML is edited elsewhere (CamillaGUI) while Room EQ runs, re-select
   the preset in Room EQ, or its next change will overwrite those edits.
 
