@@ -105,7 +105,22 @@ Gadget setup:
 - Data in `~/camilladsp/roomeq_ui/`: `settings.json` and `uploads/` (logo and
   background images).
 - `index.html` is read fresh on each request, so page changes only need a
-  browser reload. `server.py` changes need `sudo systemctl restart roomeq-ui`.
+  browser reload. `server.py` changes need a service restart. No sudo needed:
+  the service runs as `joshi` with `Restart=always`, so
+  `kill $(systemctl show -p MainPID --value roomeq-ui)` restarts it (allow a
+  few seconds; the first SIGTERM can take a while). Screens reconnect by
+  themselves; audio is not affected.
+
+Screen sleep and brightness (2026-10-03):
+- Settings popover (gear), "Screen" section: Brightness 10-100 % and
+  "Sleep after" (Never, 1, 2, 5, 10, 15, 30, 60 min; default 5), stored in
+  `settings.json` as `brightness` and `sleep_minutes`.
+- Only the kiosk page (opened as `localhost`) sleeps; phones never do. After
+  the idle time it shows a black cover and sends `screen` `on:false`; the
+  server writes 0 to `/sys/class/backlight/10-0045/brightness` (group `video`,
+  so no sudo). The first touch only wakes it: the cover swallows that touch.
+- Commands: `screen` {on}, `brightness` {value, save}. If the page that put the
+  screen to sleep disconnects, the server turns the backlight back on.
 
 How it works:
 - The server talks to CamillaDSP's websocket on 1234 and serves the page and a

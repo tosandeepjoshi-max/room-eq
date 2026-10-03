@@ -141,7 +141,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .mfoot{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
 
 /* appearance popover */
-.pop{position:fixed;top:84px;right:20px;width:316px;background:var(--raised);border:1px solid #4a5668;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.55);padding:16px;display:none;flex-direction:column;gap:12px;z-index:10}
+.pop{position:fixed;top:84px;right:20px;width:316px;background:var(--raised);border:1px solid #4a5668;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.55);padding:16px;display:none;flex-direction:column;gap:12px;z-index:10;max-height:calc(100dvh - 100px);overflow-y:auto}
 .pop.open{display:flex}
 .pop h2{font-size:15px;margin:0}
 .pop h3{font-size:12px;color:var(--muted);margin:2px 0 0;font-weight:700}
@@ -156,6 +156,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .hint{font-size:11px;color:var(--muted);line-height:1.4}
 .op label{display:flex;justify-content:space-between;font-size:13px}
 .op label span:first-child{color:var(--muted)}
+.oprow{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.oprow span{color:var(--muted)}
+.selbox{background:var(--sunk);color:var(--text);border:1px solid #4a5668;border-radius:8px;height:36px;padding:0 10px;font:600 13px var(--sans)}
+.sleep{position:fixed;inset:0;background:#000;z-index:100;display:none;touch-action:none}
+.sleep.show{display:block}
 
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#4a1f1c;border:1px solid var(--coral);color:var(--text);padding:10px 16px;border-radius:10px;font-size:13px;max-width:80vw;display:none;z-index:20}
 .toast.show{display:block}
@@ -237,7 +242,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   .btnrow button{height:38px;font-size:13px}
   #lcinfo{display:none}
   .mfoot{justify-content:center}
-  .pop{top:56px;right:8px}
+  .pop{top:66px;right:8px;max-height:calc(100dvh - 74px);gap:8px;padding:12px}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
@@ -264,7 +269,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
       <span class="status"><i id="sdot"></i><span id="stext">Connecting</span></span>
       <button class="ico" id="undo" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 7 L4 12 L9 17"/><path d="M4 12 H15 A5 5 0 0 1 15 22"/></svg></button>
       <button class="ico" id="save" type="button" aria-label="Save to config file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M5 3 H16 L21 8 V21 H3 V3 Z"/><path d="M7 3 V9 H15 V3"/><rect x="7" y="13" width="10" height="6"/></svg><span class="dot" id="dirtydot" hidden></span></button>
-      <button class="ico" id="gear" type="button" aria-label="Appearance" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M4.9 4.9 L7 7 M17 17 L19.1 19.1 M4.9 19.1 L7 17 M17 7 L19.1 4.9"/></svg></button>
+      <button class="ico" id="gear" type="button" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M4.9 4.9 L7 7 M17 17 L19.1 19.1 M4.9 19.1 L7 17 M17 7 L19.1 4.9"/></svg></button>
     </div>
   </header>
 
@@ -318,11 +323,18 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   </div>
 </div>
 
-<section class="pop" id="pop" aria-label="Appearance">
+<section class="pop" id="pop" aria-label="Settings">
   <div style="display:flex;justify-content:space-between;align-items:center">
-    <h2>Appearance</h2>
+    <h2>Settings</h2>
     <button class="ico" id="popclose" type="button" aria-label="Close" style="width:36px;height:36px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
   </div>
+  <h3>Screen</h3>
+  <div class="op" id="brightrow">
+    <label for="bright"><span>Brightness</span><span id="brval">100%</span></label>
+    <input type="range" id="bright" min="10" max="100" step="1" value="100">
+  </div>
+  <div class="oprow"><label for="sleepsel"><span>Sleep after</span></label><select id="sleepsel" class="selbox"></select></div>
+  <p class="hint" style="margin:0">Only the touchscreen sleeps. The first touch just wakes it.</p>
   <h3>Background</h3>
   <div class="tiles" id="tiles">
     <button class="tile" type="button" data-bg="carbon"><i style="background:repeating-linear-gradient(135deg,#1b2029 0 6px,#1f2530 6px 12px)"></i>Carbon</button>
@@ -346,6 +358,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 </section>
 
 <div class="toast" id="toast" role="alert"></div>
+<div class="sleep" id="sleep" aria-hidden="true"></div>
 <div class="offline" id="offline">Can't reach the Pi. Reconnecting…</div>
 
 <script>
@@ -366,7 +379,7 @@ function connect() {
   if (DEMO) { startDemo(); return; }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}/ws`);
-  ws.onopen = () => $('offline').classList.remove('show');
+  ws.onopen = () => { $('offline').classList.remove('show'); if (asleep) send({ cmd: 'screen', on: false }); };
   ws.onclose = () => { $('offline').classList.add('show'); setTimeout(connect, 1500); };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
@@ -393,7 +406,8 @@ function startDemo() {
     { name: 'treble', ...bq('Highshelf', 5000, -1, { slope: 6 }) },
   ];
   setModel({ type: 'state', config_name: 'room_eq.yml', presets: ['movie.yml', 'room_eq.yml'], filters, samplerate: 192000,
-    bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9 } });
+    bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5 },
+    sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], has_backlight: true, screen_on: true });
   status = { state: 'Running', capture_rate: 192000, temp: 56, load: 12, clipped: 0 }; drawStatus();
   let t = 0;
   setInterval(() => {
@@ -551,7 +565,7 @@ function render() {
   drawHeader(); drawChips();
   if (key !== stripsKey) { stripsKey = key; buildStrips(); }
   if (key + '#' + selected !== detailKey) { detailKey = key + '#' + selected; buildDetail(); buildNodes(); }
-  updateMixer(); drawCurve(); applySettings();
+  updateMixer(); drawCurve(); applySettings(); applyScreenSettings();
 }
 function select(name) { if (selected !== name) { selected = name; render(); } }
 function drawHeader() {
@@ -840,6 +854,51 @@ $('logorm').addEventListener('click', () => send({ cmd: 'settings', values: { lo
 $('bgrm').addEventListener('click', () => send({ cmd: 'settings', values: { background_file: null, background: 'carbon' } }));
 $('logofile').addEventListener('change', (e) => { if (e.target.files[0]) upload('logo', e.target.files[0]); e.target.value = ''; });
 $('bgfile').addEventListener('change', (e) => { if (e.target.files[0]) upload('background', e.target.files[0]); e.target.value = ''; });
+
+/* ---------- screen sleep (touchscreen only) ---------- */
+// The kiosk browser on the Pi opens localhost; phones use the Pi's name, so they never sleep.
+const KIOSK = ['localhost', '127.0.0.1'].includes(location.hostname);
+let asleep = false, idleTimer = null, armedFor = null;
+function armIdle() {
+  clearTimeout(idleTimer);
+  const min = (model && model.settings && model.settings.sleep_minutes) || 0;
+  armedFor = min;
+  if (KIOSK && min && !asleep) idleTimer = setTimeout(goSleep, min * 60000);
+}
+function goSleep() {
+  if (dragging) { armIdle(); return; }
+  asleep = true; togglePop(false);
+  $('sleep').classList.add('show');
+  send({ cmd: 'screen', on: false });
+}
+// The waking touch is swallowed: the black cover stays until the finger lifts, so nothing underneath gets pressed.
+$('sleep').addEventListener('pointerdown', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  if (asleep) { asleep = false; send({ cmd: 'screen', on: true }); armIdle(); }
+});
+const uncover = () => setTimeout(() => { if (!asleep) $('sleep').classList.remove('show'); }, 350);
+$('sleep').addEventListener('pointerup', uncover); $('sleep').addEventListener('pointercancel', uncover);
+['pointerdown', 'keydown', 'wheel'].forEach((t) => document.addEventListener(t, () => { if (!asleep) armIdle(); }, true));
+document.addEventListener('keydown', () => { if (asleep) { asleep = false; send({ cmd: 'screen', on: true }); $('sleep').classList.remove('show'); armIdle(); } }, true);
+function applyScreenSettings() {
+  const s = model.settings || {};
+  $('brightrow').hidden = !model.has_backlight;
+  if (document.activeElement !== $('bright')) $('bright').value = s.brightness ?? 100;
+  $('brval').textContent = $('bright').value + '%';
+  const choices = model.sleep_choices || [0, 1, 2, 5, 10, 15, 30, 60];
+  const opts = choices.map((m) => `<option value="${m}">${m ? m + ' min' : 'Never'}</option>`).join('');
+  if ($('sleepsel').dataset.opts !== opts) { $('sleepsel').innerHTML = opts; $('sleepsel').dataset.opts = opts; }
+  $('sleepsel').value = s.sleep_minutes ?? 0;
+  if (armedFor !== (s.sleep_minutes || 0)) armIdle();
+}
+let brightTimer = null;
+$('bright').addEventListener('input', (e) => {
+  $('brval').textContent = e.target.value + '%';
+  clearTimeout(brightTimer);
+  brightTimer = setTimeout(() => send({ cmd: 'brightness', value: Number(e.target.value) }), 60);
+});
+$('bright').addEventListener('change', (e) => send({ cmd: 'brightness', value: Number(e.target.value), save: true }));
+$('sleepsel').addEventListener('change', (e) => send({ cmd: 'settings', values: { sleep_minutes: Number(e.target.value) } }));
 
 buildGrid();
 connect();

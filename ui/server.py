@@ -24,6 +24,9 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 STATIC_DIR = Path(__file__).resolve().parent
 LOWCUT_NAME = "__roomeq_lowcut"
+# Touchscreen backlight; writable by the video group, so no sudo is needed.
+BACKLIGHT_DIR = os.environ.get("ROOMEQ_BACKLIGHT") or next(iter(sorted(Path("/sys/class/backlight").glob("*"))), None)
+SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never
 LEVEL_INTERVAL = 0.07   # seconds between level updates (~14 per second)
 STATUS_INTERVAL = 1.0
 
@@ -33,6 +36,8 @@ DEFAULT_SETTINGS = {
     "logo_file": None,
     "opacity": 0.9,
     "lowcut_freq": 80,
+    "brightness": 100,           # touchscreen backlight, percent (10-100)
+    "sleep_minutes": 5,          # touchscreen goes dark after this idle time; 0 = never
     "disabled": {},              # config path -> list of filter names switched off
 }
 
@@ -97,6 +102,8 @@ class App:
         self.status = {}
         self.signal_levels_cmd = True
         self.error = None
+        self.screen_on = True
+        self.screen_owner = None    # the screen (websocket) that put the display to sleep
 
     # ---------- settings ----------
     def _load_settings(self):
@@ -113,6 +120,19 @@ class App:
         tmp = SETTINGS_FILE.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.settings, indent=2))
         tmp.replace(SETTINGS_FILE)
+
+    # ---------- touchscreen backlight ----------
+    def apply_backlight(self):
+        """Backlight off while asleep, otherwise at the saved brightness."""
+        if BACKLIGHT_DIR is None:
+            return
+        d = Path(BACKLIGHT_DIR)
+        try:
+            top = int((d / "max_brightness").read_text())
+            pct = max(10, min(100, int(self.settings.get("brightness", 100))))
+            (d / "brightness").write_text(str(round(top * pct / 100) if self.screen_on else 0))
+        except (OSError, ValueError) as exc:
+            self.error = f"Backlight: {exc}"
 
     def disabled(self):
         return set(self.settings["disabled"].get(str(self.config_path), []))
@@ -244,7 +264,11 @@ class App:
             "dirty": self.dirty,
             "can_undo": bool(self.history),
             "settings": {k: self.settings[k] for k in
-                         ("background", "background_file", "logo_file", "opacity")},
+                         ("background", "background_file", "logo_file", "opacity",
+                          "brightness", "sleep_minutes")},
+            "sleep_choices": SLEEP_CHOICES,
+            "has_backlight": BACKLIGHT_DIR is not None,
+            "screen_on": self.screen_on,
             "error": self.error,
         }
 
@@ -260,8 +284,22 @@ class App:
         await self.broadcast(self.model())
 
     # ---------- commands from the screens ----------
-    async def handle(self, msg):
+    async def handle(self, msg, ws=None):
         cmd = msg.get("cmd")
+        if cmd == "screen":
+            # Sent by the touchscreen page: on=False after its idle time, on=True on touch.
+            self.screen_on = bool(msg.get("on"))
+            self.screen_owner = None if self.screen_on else ws
+            self.apply_backlight()
+            return
+        if cmd == "brightness":
+            # Live while dragging; saved to settings.json only when save is true (the slider is released).
+            self.settings["brightness"] = max(10, min(100, int(msg["value"])))
+            self.apply_backlight()
+            if msg.get("save"):
+                self.save_settings()
+                await self.broadcast_state()
+            return
         if self.base is None and cmd not in ("settings", "preset"):
             await self.load_active()
         if cmd == "set_param":
@@ -353,6 +391,8 @@ class App:
             for k in ("background", "opacity", "logo_file", "background_file"):
                 if k in msg.get("values", {}):
                     self.settings[k] = msg["values"][k]
+            if int(msg.get("values", {}).get("sleep_minutes", -1)) in SLEEP_CHOICES:
+                self.settings["sleep_minutes"] = int(msg["values"]["sleep_minutes"])
             self.save_settings()
             await self.broadcast_state()
 
@@ -437,12 +477,16 @@ async def ws_handler(request):
         async for msg in ws:
             if msg.type == WSMsgType.TEXT:
                 try:
-                    await app_state.handle(json.loads(msg.data))
+                    await app_state.handle(json.loads(msg.data), ws)
                 except Exception as exc:  # report, keep the connection alive
                     app_state.error = f"{type(exc).__name__}: {exc}"
                     await app_state.broadcast_state()
     finally:
         app_state.clients.discard(ws)
+        if ws is app_state.screen_owner and not app_state.screen_on:
+            # The touchscreen page went away while dark (browser closed): never leave it stuck off.
+            app_state.screen_on, app_state.screen_owner = True, None
+            app_state.apply_backlight()
     return ws
 
 
@@ -477,6 +521,7 @@ async def index(request):
 
 
 async def on_startup(app):
+    app_state.apply_backlight()
     app["tasks"] = [asyncio.ensure_future(app_state.level_loop()),
                     asyncio.ensure_future(app_state.status_loop())]
 
