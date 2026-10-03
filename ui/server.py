@@ -9,6 +9,7 @@ import asyncio
 import copy
 import json
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -108,6 +109,8 @@ class App:
         self.screen_on = True
         self.screen_owner = None    # the screen (websocket) that put the display to sleep
         self.reconnecting = False
+        self.recover_delay = 5      # seconds until the next auto-restart attempt; backs off to 30
+        self.recover_at = 0
 
     # ---------- settings ----------
     def _load_settings(self):
@@ -436,6 +439,46 @@ class App:
         await self.broadcast(notice)
         await self.broadcast_state()
 
+    async def auto_recover(self, state):
+        """Restart processing after a device dropout, e.g. the KEF leaving USB when the TV turns on.
+
+        CamillaDSP stops on a capture or playback error and stays Inactive even after the
+        device returns. The KEF's power saving switches it off (and off USB) regularly, so
+        nothing is tried while a device is missing; once both are present again the
+        effective config is re-applied, keeping bypass, low cut and switched-off filters.
+        Failed attempts back off from 5 to 30 seconds.
+        """
+        if state == "Running":
+            self.recover_delay = 5
+            return
+        if state != "Inactive" or self.reconnecting or self.base is None:
+            return
+        now = time.monotonic()
+        if now < self.recover_at:
+            return
+        try:
+            reason = await self.cdsp.call("GetStopReason")
+        except RuntimeError:
+            return
+        if not isinstance(reason, dict):   # "None" or "Done": stopped on purpose, leave it
+            return
+        if not self.devices_present():
+            return
+        self.recover_at = now + self.recover_delay
+        self.recover_delay = min(30, self.recover_delay * 2)
+        await self.apply()
+        await self.broadcast({"type": "notice", "ok": True,
+                              "text": "Speakers back: audio restarted"})
+
+    def devices_present(self):
+        """True when the ALSA cards named in the config (hw:CARD=...) exist right now."""
+        devs = (self.base or {}).get("devices") or {}
+        for side in ("capture", "playback"):
+            m = re.search(r"CARD=([^,]+)", str((devs.get(side) or {}).get("device", "")))
+            if m and not Path(f"/proc/asound/{m.group(1)}").exists():
+                return False
+        return True
+
     async def save(self):
         if self.config_path is None or self.base is None:
             self.error = "No config file to save to"
@@ -495,6 +538,7 @@ class App:
             if self.base is None and st["state"] is not None:
                 await self.load_active()
                 await self.broadcast_state()
+            await self.auto_recover(st["state"])
             self.status = st
             if self.clients:
                 await self.broadcast(st)

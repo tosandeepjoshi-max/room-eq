@@ -212,11 +212,12 @@ Reconnect button:
    resampler off, then re-select the preset in Room EQ.
 3. ~~Reconnect feature~~: done 2026-10-03. The user installed the helper and the
    sudoers rule; a test through the server took 3.7 s, then Running at 192 kHz.
-3b. **[OPEN] Auto-recover after a KEF USB dropout.** 2026-10-03 the KEF dropped
-   off USB (likely when the TV turned on); CamillaDSP stopped with a
-   PlaybackError ("No such device") and stayed Inactive although the KEF came
-   back. Fixed by hand by re-applying the config. Proposed: the server retries
-   apply() every few seconds while state is Inactive with a device error.
+3b. Auto-recover after a KEF USB dropout: deployed 2026-10-03, not yet seen
+   live. The KEF's power saving switches it off (it leaves USB) regularly;
+   CamillaDSP then stops with a PlaybackError and stays Inactive. The server's
+   status loop (`auto_recover`) waits while a configured card is missing from
+   `/proc/asound/`, then re-applies the effective config once both are back
+   and shows "Speakers back: audio restarted". Failed attempts back off 5-30 s.
 4. Room measurement with REW + UMIK-1 at the listening position, filters at
    0 dB, sub running, then replace the placeholder filters.
 5. Larger logo area: done 2026-10-03 (title removed, header 68 px / 56 px on
