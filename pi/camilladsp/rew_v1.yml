@@ -12,7 +12,7 @@ devices:
     type: Alsa
   capture_samplerate: 192000
   chunksize: 1024
-  enable_rate_adjust: null
+  enable_rate_adjust: true
   multithreaded: null
   playback:
     channels: 2
@@ -21,9 +21,7 @@ devices:
     type: Alsa
   queuelimit: null
   rate_measure_interval: null
-  resampler:
-    profile: Balanced
-    type: AsyncSinc
+  resampler: null
   samplerate: 192000
   silence_threshold: null
   silence_timeout: null

@@ -113,9 +113,8 @@ Gadget setup:
   `camilladsp -s ~/camilladsp/statefile.yml -w -p 1234 -o ~/camilladsp/camilladsp.log`
   (runs as `joshi`, FIFO priority 10).
 - Configs in `~/camilladsp/configs/`. Active: `room_eq.yml` (v4 format).
-- Devices: samplerate 192000, chunksize 1024, **rate adjust on, resampler off**.
-  The log last showed a needless 1:1 resampler with rate adjust off; this still
-  needs fixing in the config (see Open items).
+- Devices: samplerate 192000, chunksize 1024, rate adjust on, no resampler
+  (fixed 2026-10-03).
 - Current filters (placeholders until REW measurements). Names contain spaces:
   - `preamp`: Gain
   - `bass`: Biquad Lowshelf, 100 Hz, slope 6
@@ -258,9 +257,11 @@ Reconnect button:
 
 1. ~~Compact layout on the 800 x 480 screen~~: done 2026-10-03 (new fader
    layout deployed, kiosk restarted, checked live at 800 x 480).
-2. **Fix devices config**: confirmed 2026-10-03 that `room_eq.yml` has
-   `enable_rate_adjust: null` and a `resampler:` block. Set rate adjust on and
-   resampler off, then re-select the preset in Room EQ.
+2. ~~Fix devices config~~: done 2026-10-03. Both presets now have
+   `enable_rate_adjust: true` and no resampler (backups `*.pre-rateadjust`).
+   Load fell to ~3.4 %, rate adjust ~1.0001, buffer converging; the "needless
+   1:1 sample rate conversion" warning is gone. Earlier underruns (16:09,
+   16:14) were before the change.
 3. ~~Reconnect feature~~: done 2026-10-03. The user installed the helper and the
    sudoers rule; a test through the server took 3.7 s, then Running at 192 kHz.
 3b. Auto-recover after a KEF USB dropout: deployed 2026-10-03, not yet seen
