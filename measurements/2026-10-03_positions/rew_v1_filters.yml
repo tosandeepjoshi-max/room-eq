@@ -1,0 +1,29 @@
+filters:
+  rew 1:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 20.9
+      gain: -2.8
+      q: 5.00
+  rew 2:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 39.6
+      gain: -4.7
+      q: 5.00
+  rew 3:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 50.1
+      gain: -3.8
+      q: 5.00
+  rew 4:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 66.7
+      gain: -6.9
+      q: 5.00

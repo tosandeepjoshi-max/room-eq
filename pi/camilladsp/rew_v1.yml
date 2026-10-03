@@ -1,0 +1,79 @@
+description: null
+devices:
+  adjust_period: null
+  capture:
+    channels: 2
+    device: hw:CARD=UAC2Gadget,DEV=0
+    format: S32_LE
+    labels: null
+    link_mute_control: null
+    link_volume_control: null
+    stop_on_inactive: null
+    type: Alsa
+  capture_samplerate: 192000
+  chunksize: 1024
+  enable_rate_adjust: null
+  multithreaded: null
+  playback:
+    channels: 2
+    device: hw:CARD=Speaker,DEV=0
+    format: S24_3_LE
+    type: Alsa
+  queuelimit: null
+  rate_measure_interval: null
+  resampler:
+    profile: Balanced
+    type: AsyncSinc
+  samplerate: 192000
+  silence_threshold: null
+  silence_timeout: null
+  stop_on_rate_change: null
+  target_level: null
+  volume_limit: null
+  volume_ramp_time: null
+  worker_threads: null
+filters:
+  preamp:
+    type: Gain
+    parameters:
+      gain: 0.0
+  room 21:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 20.9
+      gain: -2.8
+      q: 5.0
+  room 40:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 39.6
+      gain: -4.7
+      q: 5.0
+  room 50:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 50.1
+      gain: -3.8
+      q: 5.0
+  room 67:
+    type: Biquad
+    parameters:
+      type: Peaking
+      freq: 66.7
+      gain: -6.9
+      q: 5.0
+mixers: {}
+pipeline:
+- type: Filter
+  channels: null
+  names:
+  - preamp
+  - room 21
+  - room 40
+  - room 50
+  - room 67
+processors: {}
+title: 'REW v1: 4 cuts from 6-position average, sub phase 0 (2026-10-03)'
