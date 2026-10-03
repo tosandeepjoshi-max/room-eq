@@ -210,13 +210,13 @@ Reconnect button:
 2. **Fix devices config**: confirmed 2026-10-03 that `room_eq.yml` has
    `enable_rate_adjust: null` and a `resampler:` block. Set rate adjust on and
    resampler off, then re-select the preset in Room EQ.
-3. **Reconnect feature: code done 2026-10-03, root part not installed.** The
-   header plug button sends `reconnect`; the server runs
-   `sudo -n /usr/local/bin/roomeq-reconnect` and re-applies the config, or
-   shows "Reconnect failed: ..." (today: "a password is required"). The helper
-   is in `pi/bin/roomeq-reconnect`, staged on the Pi in `~/roomeq-install/`.
-   The user installs it root-owned in `/usr/local/bin` plus the sudoers rule
-   below, by hand (Claude may not set up passwordless sudo itself).
+3. ~~Reconnect feature~~: done 2026-10-03. The user installed the helper and the
+   sudoers rule; a test through the server took 3.7 s, then Running at 192 kHz.
+3b. **[OPEN] Auto-recover after a KEF USB dropout.** 2026-10-03 the KEF dropped
+   off USB (likely when the TV turned on); CamillaDSP stopped with a
+   PlaybackError ("No such device") and stayed Inactive although the KEF came
+   back. Fixed by hand by re-applying the config. Proposed: the server retries
+   apply() every few seconds while state is Inactive with a device error.
 4. Room measurement with REW + UMIK-1 at the listening position, filters at
    0 dB, sub running, then replace the placeholder filters.
 5. Larger logo area: done 2026-10-03 (title removed, header 68 px / 56 px on
