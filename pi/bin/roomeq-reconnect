@@ -1,0 +1,16 @@
+#!/bin/sh
+# Reset the USB audio link to the Shield, the software version of replugging the cable.
+# Installed root-owned at /usr/local/bin/roomeq-reconnect; the Room EQ server runs it via
+# sudo without a password (see /etc/sudoers.d/roomeq). Audio stops for a few seconds.
+set -e
+systemctl stop camilladsp          # it holds the gadget capture device open
+modprobe -r g_audio
+sleep 2
+modprobe g_audio
+# Give the Shield a moment to enumerate the gadget again.
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  grep -qx configured /sys/class/udc/*/state 2>/dev/null && break
+  sleep 1
+done
+systemctl start camilladsp
+echo "udc: $(cat /sys/class/udc/*/state 2>/dev/null)"

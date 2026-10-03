@@ -210,10 +210,13 @@ Reconnect button:
 2. **Fix devices config**: confirmed 2026-10-03 that `room_eq.yml` has
    `enable_rate_adjust: null` and a `resampler:` block. Set rate adjust on and
    resampler off, then re-select the preset in Room EQ.
-3. **Reconnect feature: not built yet.** As of 2026-10-03 neither
-   `/usr/local/bin/roomeq-reconnect` nor `/etc/sudoers.d/roomeq` exists, and
-   neither `ui/server.py` nor `ui/index.html` has reconnect code. The design
-   under "Reconnect button" is still a plan.
+3. **Reconnect feature: code done 2026-10-03, root part not installed.** The
+   header plug button sends `reconnect`; the server runs
+   `sudo -n /usr/local/bin/roomeq-reconnect` and re-applies the config, or
+   shows "Reconnect failed: ..." (today: "a password is required"). The helper
+   is in `pi/bin/roomeq-reconnect`, staged on the Pi in `~/roomeq-install/`.
+   The user installs it root-owned in `/usr/local/bin` plus the sudoers rule
+   below, by hand (Claude may not set up passwordless sudo itself).
 4. Room measurement with REW + UMIK-1 at the listening position, filters at
    0 dB, sub running, then replace the placeholder filters.
 5. Larger logo area: done 2026-10-03 (title removed, header 68 px / 56 px on

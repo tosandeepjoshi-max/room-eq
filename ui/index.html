@@ -164,6 +164,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#4a1f1c;border:1px solid var(--coral);color:var(--text);padding:10px 16px;border-radius:10px;font-size:13px;max-width:80vw;display:none;z-index:20}
 .toast.show{display:block}
+.toast.ok{background:#173b2c;border-color:#46d39a}
+.ico.busy svg{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
 .offline{position:fixed;inset:0;background:rgba(15,18,23,.8);display:none;align-items:center;justify-content:center;font-size:16px;z-index:30;text-align:center;padding:24px;line-height:1.5}
 .offline.show{display:flex}
 
@@ -267,6 +270,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
     </div>
     <div class="hright">
       <span class="status"><i id="sdot"></i><span id="stext">Connecting</span></span>
+      <button class="ico" id="reconnect" type="button" aria-label="Reconnect the Shield (resets the USB audio link)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v4M15 3v4"/><path d="M6 7h12v3a6 6 0 0 1-12 0z"/><path d="M12 16v5"/></svg></button>
       <button class="ico" id="undo" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 7 L4 12 L9 17"/><path d="M4 12 H15 A5 5 0 0 1 15 22"/></svg></button>
       <button class="ico" id="save" type="button" aria-label="Save to config file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M5 3 H16 L21 8 V21 H3 V3 Z"/><path d="M7 3 V9 H15 V3"/><rect x="7" y="13" width="10" height="6"/></svg><span class="dot" id="dirtydot" hidden></span></button>
       <button class="ico" id="gear" type="button" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M4.9 4.9 L7 7 M17 17 L19.1 19.1 M4.9 19.1 L7 17 M17 7 L19.1 4.9"/></svg></button>
@@ -386,6 +390,7 @@ function connect() {
     if (msg.type === 'state') { if (dragging) pending = msg; else setModel(msg); }
     else if (msg.type === 'levels') drawLevels(msg);
     else if (msg.type === 'status') { status = msg; drawStatus(); }
+    else if (msg.type === 'notice') toast(msg.text, msg.ok);
     else if (msg.type === 'selected') { selected = msg.name; detailKey = ''; if (model) render(); }
   };
 }
@@ -434,6 +439,10 @@ function demoCommand(obj) {
     case 'set_lowcut': m.lowcut = obj.value; break;
     case 'settings': Object.assign(m.settings, obj.values); break;
     case 'save': m.dirty = false; break;
+    case 'reconnect':
+      m.reconnecting = true;
+      setTimeout(() => { m.reconnecting = false; setModel(m); toast('Reconnected', true); }, 3000);
+      break;
     default: return;
   }
   setModel(m);
@@ -576,6 +585,8 @@ function drawHeader() {
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = model.config_name || '';
   $('undo').disabled = !model.can_undo;
+  $('reconnect').classList.toggle('busy', !!model.reconnecting);
+  $('reconnect').disabled = !!model.reconnecting;
   $('dirtydot').hidden = !model.dirty;
   $('save').setAttribute('aria-label', model.dirty ? 'Save changes to config file (unsaved changes)' : 'Save to config file');
   $('bypass').setAttribute('aria-pressed', model.bypass);
@@ -809,7 +820,7 @@ async function upload(kind, file) {
 function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function cssEsc(s) { return window.CSS && CSS.escape ? CSS.escape(s) : s.replace(/"/g, '\\"'); }
 let toastTimer;
-function toast(text) { const t = $('toast'); t.textContent = text; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 5000); }
+function toast(text, ok) { const t = $('toast'); t.textContent = text; t.classList.toggle('ok', !!ok); t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 5000); }
 
 /* ---------- events ---------- */
 document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send({ cmd: 'set_mode', mode: b.dataset.mode })));
@@ -822,6 +833,9 @@ function stepPreset(dir) {
 $('prev').addEventListener('click', () => stepPreset(-1));
 $('next').addEventListener('click', () => stepPreset(1));
 $('undo').addEventListener('click', () => send({ cmd: 'undo' }));
+$('reconnect').addEventListener('click', () => {
+  if (confirm('Reconnect the Shield? Audio stops for a few seconds.')) send({ cmd: 'reconnect' });
+});
 $('save').addEventListener('click', () => send({ cmd: 'save' }));
 $('bypass').addEventListener('click', () => send({ cmd: 'set_bypass', value: !model.bypass }));
 $('subcut').addEventListener('click', () => send({ cmd: 'set_lowcut', value: !model.lowcut }));

@@ -27,6 +27,9 @@ LOWCUT_NAME = "__roomeq_lowcut"
 # Touchscreen backlight; writable by the video group, so no sudo is needed.
 BACKLIGHT_DIR = os.environ.get("ROOMEQ_BACKLIGHT") or next(iter(sorted(Path("/sys/class/backlight").glob("*"))), None)
 SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never
+# Resets the USB gadget link to the Shield (stop camilladsp, reload g_audio, start camilladsp).
+# Needs a root-owned /usr/local/bin/roomeq-reconnect and a sudoers rule allowing it without a password.
+RECONNECT_CMD = ["sudo", "-n", "/usr/local/bin/roomeq-reconnect"]
 LEVEL_INTERVAL = 0.07   # seconds between level updates (~14 per second)
 STATUS_INTERVAL = 1.0
 
@@ -104,6 +107,7 @@ class App:
         self.error = None
         self.screen_on = True
         self.screen_owner = None    # the screen (websocket) that put the display to sleep
+        self.reconnecting = False
 
     # ---------- settings ----------
     def _load_settings(self):
@@ -269,6 +273,7 @@ class App:
             "sleep_choices": SLEEP_CHOICES,
             "has_backlight": BACKLIGHT_DIR is not None,
             "screen_on": self.screen_on,
+            "reconnecting": self.reconnecting,
             "error": self.error,
         }
 
@@ -291,6 +296,10 @@ class App:
             self.screen_on = bool(msg.get("on"))
             self.screen_owner = None if self.screen_on else ws
             self.apply_backlight()
+            return
+        if cmd == "reconnect":
+            if not self.reconnecting:
+                asyncio.ensure_future(self.reconnect())
             return
         if cmd == "brightness":
             # Live while dragging; saved to settings.json only when save is true (the slider is released).
@@ -395,6 +404,37 @@ class App:
                 self.settings["sleep_minutes"] = int(msg["values"]["sleep_minutes"])
             self.save_settings()
             await self.broadcast_state()
+
+    async def reconnect(self):
+        """Run the reconnect helper, wait for CamillaDSP, then re-apply bypass / low cut / switched-off filters."""
+        self.reconnecting = True
+        await self.broadcast_state()
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *RECONNECT_CMD, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+            try:
+                out, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
+            except asyncio.TimeoutError:
+                proc.kill()
+                raise RuntimeError("timed out")
+            if proc.returncode:
+                lines = out.decode(errors="replace").strip().splitlines()
+                raise RuntimeError(lines[-1] if lines else f"exit code {proc.returncode}")
+            for _ in range(20):
+                try:
+                    await self.cdsp.call("GetState")
+                    break
+                except RuntimeError:
+                    await asyncio.sleep(0.5)
+            self.reconnecting = False
+            await self.apply()
+            notice = {"type": "notice", "text": "Reconnected", "ok": True}
+        except (OSError, RuntimeError) as exc:
+            notice = {"type": "notice", "text": f"Reconnect failed: {exc}", "ok": False}
+        finally:
+            self.reconnecting = False
+        await self.broadcast(notice)
+        await self.broadcast_state()
 
     async def save(self):
         if self.config_path is None or self.base is None:
