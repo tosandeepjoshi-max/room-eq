@@ -255,6 +255,10 @@ Reconnect button:
 
 ## Open items
 
+Paused 2026-10-03. Next: miniDSP flash backup when the CH341A arrives; the
+user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
+
+
 1. ~~Compact layout on the 800 x 480 screen~~: done 2026-10-03 (new fader
    layout deployed, kiosk restarted, checked live at 800 x 480).
 2. ~~Fix devices config~~: done 2026-10-03. Both presets now have
@@ -274,8 +278,9 @@ Reconnect button:
    0 dB, sub running, then replace the placeholder filters.
 5. Larger logo area: done 2026-10-03 (title removed, header 68 px / 56 px on
    the touchscreen, transparent cropped logo).
-6. Overlay (read-only) file system: explained to the user 2026-10-03, not yet
-   enabled (waiting a week or two of stable use). With it on, nothing is
+6. Overlay (read-only) file system: **ON since 2026-10-03** (the user chose to
+   accept losing manual slider tweaks at reboot). Turn it OFF before deploying
+   code or presets that must persist, then back on. With it on, nothing is
    written to the SD card and all changes (presets saved, settings.json mode
    tones / brightness, uploads, deployed code) vanish at reboot, so it must be
    OFF while changing things. Check: `findmnt -n -o FSTYPE /` (overlay = on,
