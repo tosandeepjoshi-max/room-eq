@@ -274,8 +274,15 @@ Reconnect button:
    0 dB, sub running, then replace the placeholder filters.
 5. Larger logo area: done 2026-10-03 (title removed, header 68 px / 56 px on
    the touchscreen, transparent cropped logo).
-6. Once stable: enable the overlay (read-only) file system in raspi-config to
-   protect the SD card.
+6. Overlay (read-only) file system: explained to the user 2026-10-03, not yet
+   enabled (waiting a week or two of stable use). With it on, nothing is
+   written to the SD card and all changes (presets saved, settings.json mode
+   tones / brightness, uploads, deployed code) vanish at reboot, so it must be
+   OFF while changing things. Check: `findmnt -n -o FSTYPE /` (overlay = on,
+   ext4 = off). On: `ssh -t joshis-pi "sudo raspi-config nonint
+   enable_overlayfs && sudo reboot"`. Off: same with `disable_overlayfs`.
+   Boot-partition write protection (enable_bootro) optional, not needed.
+   After any reboot: wait ~30 s, press Reconnect if the Shield does not play.
 
 ## Working rules
 
