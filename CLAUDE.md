@@ -18,6 +18,14 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
   has Pillow).
 - `archive/`: older page versions and the original `roomeq-ui.zip`.
 
+## Git
+
+- GitHub: `git@github.com:tosandeepjoshi-max/room-eq.git` (private), branch `main`.
+- Pushing needs the dedicated key, set per repo (already done here):
+  `git config core.sshCommand "C:/Windows/System32/OpenSSH/ssh.exe -i C:/Users/joshi/gitpub"`.
+  Plain `ssh` has no default key, so GitHub answers "Permission denied (publickey)".
+- `.gitattributes` keeps LF line endings (files are copied to the Pi).
+
 ## Access
 
 - Pi hostname `joshis-pi`, user `joshi`.
