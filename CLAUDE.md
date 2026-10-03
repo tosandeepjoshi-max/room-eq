@@ -123,8 +123,8 @@ How it works:
 Layout:
 - Design: slate panels (`#232a35` at adjustable opacity), coral accent
   `#ff7a72`, cyan switches `#3ccfe0`, Manrope + JetBrains Mono.
-  Header (logo slot, mode pill, preset bar, undo / save / gear; reconnect
-  planned), a row of filter chips (on/off switch, name, short info such as
+  Header (logo with a small "CamillaDSP" caption under it, no "Room EQ" title;
+  mode pill, preset bar, undo / save / gear; reconnect planned), a row of filter chips (on/off switch, name, short info such as
   "LS · 100 Hz"; scrolls sideways; "+ Band" at the end), then
   [slim EQ curve preview above the fader bank] | in/out meters. The curve is
   only a preview (160 px tall; 96 px with no title bar on the touchscreen).
@@ -141,8 +141,9 @@ Layout:
   800 x 480 touchscreen; phone layout at 700 px and below.
 - Appearance popover: backgrounds (carbon, plain, walnut, uploaded photo),
   panel opacity, logo upload/remove. Tapping the logo opens it.
-- Active branding (2026-10-03): logo `assets/logos/joshs_eq.png` ("Josh's EQ"
-  fire headphones); background `assets/backgrounds/joshs_eq_dimmed.jpg`, made
+- Active branding (2026-10-03): header logo `assets/logos/joshs_eq_header.png`
+  (made from `joshs_eq.png` by `scripts/make_logo.py`: black made transparent,
+  margins cropped); background `assets/backgrounds/joshs_eq_dimmed.jpg`, made
   with `scripts/make_background.py` (dimmed, blurred logo on 1920x1080). Upload
   without the page: on the Pi,
   `curl -F file=@<img> http://localhost:8080/upload/background` (or `/logo`).
@@ -192,8 +193,8 @@ Reconnect button:
    under "Reconnect button" is still a plan.
 4. Room measurement with REW + UMIK-1 at the listening position, filters at
    0 dB, sub running, then replace the placeholder filters.
-5. Possibly a larger logo area (uploaded logos are square and detailed; the
-   header slot is ~40 px tall).
+5. Larger logo area: done 2026-10-03 (title removed, header 68 px / 56 px on
+   the touchscreen, transparent cropped logo).
 6. Once stable: enable the overlay (read-only) file system in raspi-config to
    protect the SD card.
 
