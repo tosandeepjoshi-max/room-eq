@@ -27,17 +27,14 @@ SETTINGS_FILE = DATA_DIR / "settings.json"
 STATIC_DIR = Path(__file__).resolve().parent
 LOWCUT_NAME = "__roomeq_lowcut"
 MODES = ("room", "flat", "night", "vocal")
-# Listening modes layered on top of the preset (never written to the YAML).
-# Night: no deep bass, softer treble, and a compressor that tames loud bursts and lifts quiet dialogue.
-# Vocal: speech range lifted, low end trimmed, so dialogue stands out from music and effects.
-MODE_FILTERS = {
-    "night": {
-        "__night_treble": {"type": "Biquad", "parameters": {"type": "Highshelf", "freq": 6000.0, "gain": -6.0, "slope": 6.0}},
-    },
-    "vocal": {
-        "__vocal_low": {"type": "Biquad", "parameters": {"type": "Lowshelf", "freq": 150.0, "gain": -4.0, "slope": 6.0}},
-        "__vocal_presence": {"type": "Biquad", "parameters": {"type": "Peaking", "freq": 2500.0, "gain": 4.0, "q": 0.9}},
-    },
+# Vocal and Night are tone-fader settings: switching mode moves the tone faders, and each mode
+# remembers its own adjustments in settings.json ("mode_tones"). Room EQ uses the preset's own values.
+# Tone faders are the gain filters not named "room ..." (room correction) and not the preamp.
+# Vocal: speech range lifted, low end trimmed. Night: deep bass and top treble cut, plus a compressor.
+DEFAULT_MODE_TONES = {
+    "vocal": {"31 Hz": -2.0, "63 Hz": -3.0, "125 Hz": -3.0, "250 Hz": -1.0, "1 kHz": 1.0,
+              "2 kHz": 3.0, "4 kHz": 2.0},
+    "night": {"31 Hz": -10.0, "63 Hz": -6.0, "125 Hz": -2.0, "4 kHz": -1.0, "8 kHz": -4.0, "16 kHz": -6.0},
 }
 NIGHT_COMPRESSOR = {"type": "Compressor", "parameters": {
     "channels": 2, "attack": 0.025, "release": 1.0, "threshold": -30.0, "factor": 3.0,
@@ -61,6 +58,7 @@ DEFAULT_SETTINGS = {
     "brightness": 100,           # touchscreen backlight, percent (10-100)
     "sleep_minutes": 5,          # touchscreen goes dark after this idle time; 0 = never
     "disabled": {},              # config path -> list of filter names switched off
+    "mode_tones": copy.deepcopy(DEFAULT_MODE_TONES),   # mode -> {tone fader name: gain dB}
 }
 
 
@@ -178,7 +176,7 @@ class App:
     def _load_settings(self):
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        s = dict(DEFAULT_SETTINGS)
+        s = copy.deepcopy(DEFAULT_SETTINGS)
         try:
             s.update(json.loads(SETTINGS_FILE.read_text()))
         except (OSError, ValueError):
@@ -189,6 +187,40 @@ class App:
         tmp = SETTINGS_FILE.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.settings, indent=2))
         tmp.replace(SETTINGS_FILE)
+
+    def save_settings_soon(self, delay=2.0):
+        if getattr(self, "_settings_task", None) and not self._settings_task.done():
+            self._settings_task.cancel()
+
+        async def later():
+            try:
+                await asyncio.sleep(delay)
+                self.save_settings()
+            except asyncio.CancelledError:
+                pass
+        self._settings_task = asyncio.ensure_future(later())
+
+    # ---------- listening modes ----------
+    @staticmethod
+    def is_tone(name, f):
+        return (f.get("type") == "Biquad" and not name.startswith("__") and not re.match(r"(?i)room\b", name)
+                and isinstance((f.get("parameters") or {}).get("gain"), (int, float)))
+
+    def mode_tone(self):
+        """Tone fader gains of the current mode, or None in Room EQ / Flat (the preset's own values apply)."""
+        if self.mode not in DEFAULT_MODE_TONES:
+            return None
+        return self.settings.setdefault("mode_tones", {}).setdefault(self.mode, {})
+
+    def view_base(self):
+        """The preset as the current mode sees it: tone fader gains replaced by the mode's values."""
+        cfg = copy.deepcopy(self.base)
+        tones = self.mode_tone()
+        if cfg is not None and tones is not None:
+            for name, f in (cfg.get("filters") or {}).items():
+                if self.is_tone(name, f):
+                    f["parameters"]["gain"] = float(tones.get(name, 0.0))
+        return cfg
 
     # ---------- touchscreen backlight ----------
     def apply_backlight(self):
@@ -231,7 +263,7 @@ class App:
 
     def effective(self):
         """Config actually sent to CamillaDSP: base plus mode, low cut and switched-off filters."""
-        cfg = copy.deepcopy(self.base)
+        cfg = self.view_base()
         if cfg is None:
             return None
         off = self.disabled()
@@ -245,7 +277,7 @@ class App:
                     continue
                 step = dict(step, names=names)
             steps.append(step)
-        if (self.lowcut or self.mode == "night") and not self.bypass:
+        if self.lowcut and not self.bypass:
             cfg.setdefault("filters", {})[LOWCUT_NAME] = {
                 "type": "BiquadCombo",
                 "parameters": {"type": "ButterworthHighpass",
@@ -256,14 +288,6 @@ class App:
             if chans is not None:
                 lc["channels"] = chans
             steps.insert(0, lc)
-        overlay = MODE_FILTERS.get(self.mode, {})
-        if overlay and not self.bypass:
-            cfg.setdefault("filters", {}).update(copy.deepcopy(overlay))
-            ov = {"type": "Filter", "names": list(overlay)}
-            chans = self._channels(cfg)
-            if chans is not None:
-                ov["channels"] = chans
-            steps.append(ov)
         if self.mode == "night" and not self.bypass:
             cfg["processors"] = dict(cfg.get("processors") or {}, __night_comp=copy.deepcopy(NIGHT_COMPRESSOR))
             steps.append({"type": "Processor", "name": "__night_comp"})
@@ -324,13 +348,14 @@ class App:
             self._last_undo_time = now
             return
         self._last_undo_key, self._last_undo_time = key, now
-        self.history.append((copy.deepcopy(self.base), sorted(self.disabled())))
+        self.history.append((copy.deepcopy(self.base), sorted(self.disabled()),
+                             copy.deepcopy(self.settings.get("mode_tones", {}))))
         del self.history[:-60]
 
     # ---------- model sent to the screens ----------
     def model(self):
         filters, seen = [], set()
-        base = self.base or {}
+        base = self.view_base() or {}
         off = self.disabled()
         for step in base.get("pipeline") or []:
             if step.get("type") != "Filter":
@@ -357,7 +382,7 @@ class App:
             "mode": self.mode,
             "bypass": self.bypass,
             "lowcut": self.lowcut,
-            "mode_filters": [] if self.bypass else list(copy.deepcopy(MODE_FILTERS.get(self.mode, {})).values()),
+            "compressor": self.mode == "night" and not self.bypass,
             "lowcut_freq": self.settings["lowcut_freq"],
             "dirty": self.dirty,
             "can_undo": bool(self.history),
@@ -413,8 +438,13 @@ class App:
             if f is None:
                 return
             self.push_undo((name, param))
-            f.setdefault("parameters", {})[param] = round(float(value), 3)
-            self.dirty = True
+            tones = self.mode_tone()
+            if tones is not None and param == "gain" and self.is_tone(name, f):
+                tones[name] = round(float(value), 3)
+                self.save_settings_soon()
+            else:
+                f.setdefault("parameters", {})[param] = round(float(value), 3)
+                self.dirty = True
             self.schedule_apply()
         elif cmd == "toggle_filter":
             self.push_undo()
@@ -488,7 +518,8 @@ class App:
             await self.save()
         elif cmd == "undo":
             if self.history:
-                self.base, off = self.history.pop()
+                self.base, off, tones = self.history.pop()
+                self.settings["mode_tones"] = tones
                 self.set_disabled(off)
                 self._last_undo_key = None
                 self.dirty = True
