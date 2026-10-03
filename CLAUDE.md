@@ -17,6 +17,33 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
 - `scripts/`: PC-side helpers (`make_background.py`, run with any Python that
   has Pillow).
 - `archive/`: older page versions and the original `roomeq-ui.zip`.
+- `measurements/umik1/`: UMIK-1 calibration files, serial 7079072 (`7079072.txt`
+  0 degrees, `7079072_90deg.txt` 90 degrees, mic pointing at the ceiling).
+  Copies also stay in Downloads. REW measurements and exported filters go in
+  `measurements/`.
+
+## REW measurement setup (2026-10-03)
+
+- Plug the PC into the splitter's USB port in place of the Shield: Windows sees
+  the Pi gadget as a sound card, so REW plays through CamillaDSP to the KEFs.
+  Use rear USB 2.0 ports, the UMIK-1 and the Pi on separate ports. Afterwards
+  move the cable back to the Shield and press Reconnect if it does not send.
+- Measure in Flat mode, sub on, KEF settings unchanged, 5-7 positions averaged.
+  Correct below ~300 Hz, mostly cuts, boosts at most +3 dB, 5-8 filters.
+- REW filter export goes into a new preset (e.g. `rew_v1.yml`) next to
+  `room_eq.yml`, with the preamp covering the largest boost.
+
+## miniDSP 2x4 HD / DDRC-24 (side issue, 2026-10-03)
+
+The user's old miniDSP (2x4 HD upgraded to DDRC-24 with Dirac) had UMIK-2
+firmware flashed onto its XMOS by mistake: it shows as UMIK-2 v2.06, VID 0x2752
+PID 0x002B. miniDSPUAC2Dfu fails at "Entering upgrade mode" (0xEE000003); the
+Toolbox loader sends the firmware with no reply; holding the board's reset
+button at power-up changes nothing. The XMOS flash is an Adesto AT45DB321E
+(SPI DataFlash, 3.3 V) next to the XMOS chip. Plan: with a CH341A plus 3.3 V
+adapter (ordered), read the flash twice as a backup, inspect it for a factory
+image plus the UMIK-2 upgrade image, and only then erase the upgrade image.
+Not needed for the Pi chain; its value is resale or a car install.
 
 ## Git
 
