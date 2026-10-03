@@ -1,0 +1,14 @@
+[Unit]
+Description=Room EQ touchscreen and phone UI for CamillaDSP
+After=network.target camilladsp.service
+Wants=camilladsp.service
+
+[Service]
+User=joshi
+WorkingDirectory=/home/joshi/roomeq-ui
+ExecStart=/usr/bin/python3 /home/joshi/roomeq-ui/server.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

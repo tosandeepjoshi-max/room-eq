@@ -1,0 +1,207 @@
+# Josh's EQ: Raspberry Pi room-correction DSP
+
+A Raspberry Pi 4 sits between an NVIDIA Shield and a pair of KEF LS50 Wireless
+speakers. It receives USB audio from the Shield, applies room-correction EQ with
+CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
+("Room EQ") controls it.
+
+## Project folder (Windows PC)
+
+`C:\Users\joshi\room-eq\` (on the Pi the UI lives in `~/roomeq-ui/`):
+
+- `ui/`: working copy of `~/roomeq-ui/`. Edit here, then `scp` to the Pi.
+- `pi/`: reference copies of Pi files (`pi/camilladsp/room_eq.yml`, later the
+  reconnect script and sudoers file).
+- `assets/logos/`: logo candidates (plain and `_transparent` PNGs) and the
+  active `joshs_eq.png`; `assets/backgrounds/`: generated backgrounds.
+- `scripts/`: PC-side helpers (`make_background.py`, run with any Python that
+  has Pillow).
+- `archive/`: older page versions and the original `roomeq-ui.zip`.
+
+## Access
+
+- Pi hostname `joshis-pi`, user `joshi`.
+- From the Windows PC, `ssh joshis-pi` logs in with the key `~/pi_access`
+  (entry in `C:\Users\joshi\.ssh\config`). No password prompt.
+- Copy files with `scp <file> joshis-pi:~/roomeq-ui/`.
+- `sudo` on the Pi asks for the user's password, except for
+  `/usr/local/bin/roomeq-reconnect` (see below). Ask the user before running
+  other sudo commands.
+
+## Hardware
+
+- Raspberry Pi 4, Raspberry Pi OS 64-bit desktop (Debian Trixie base,
+  kernel 6.18), labwc (Wayland), booting from an SD card.
+- Touchscreen on DSI: `wlr-randr` reports **800 x 480**, scale 1.
+- Power and data through a USB-C power/data splitter (ports labelled RPI4,
+  USB, PWR): RPI4 -> Pi USB-C, USB -> Shield, PWR -> Pi power supply.
+- NVIDIA Shield is the USB host / source. It sees the Pi as "Linux USB gadget".
+- KEF LS50 Wireless (gen 1) on a blue USB 3 port of the Pi. Subwoofer is fed
+  from the KEF's sub out (RCA), so any filter in CamillaDSP also affects the sub.
+- Measurement kit for later: REW + UMIK-1.
+
+## Audio chain
+
+Shield -> USB gadget (UAC2) -> CamillaDSP -> KEF USB
+
+| Side | ALSA device | Format | Rate | Channels |
+|---|---|---|---|---|
+| Capture (gadget) | `hw:CARD=UAC2Gadget,DEV=0` | `S32_LE` (only option) | 192000 (only option) | 2 |
+| Playback (KEF) | `hw:CARD=Speaker,DEV=0` | `S24_3_LE` (also offers S16_LE) | 44.1k to 192k | 2 |
+
+Gadget setup:
+- `/boot/firmware/config.txt`, under `[all]`: `dtoverlay=dwc2,dr_mode=peripheral`
+  (the `[cm4]`/`[cm5]`/`[pi5]` sections above it do not apply to a Pi 4).
+- `/etc/modules`: `dwc2` and `g_audio`.
+- `/etc/modprobe.d/usb_g_audio.conf`:
+  `options g_audio c_srate=192000 c_ssize=4 c_chmask=3 p_chmask=0`
+- Gadget max buffer is 8192 frames, so keep chunksize at 1024.
+- Connection state: `cat /sys/class/udc/*/state` (`configured` = Shield attached).
+- Is the Shield sending? `amixer -c UAC2Gadget cget iface=PCM,name='Capture Rate'`
+  (192000 = audio arriving, 0 = not sending).
+
+## CamillaDSP
+
+- Version 4.1.3, binary `/usr/local/bin/camilladsp`.
+- Service `camilladsp.service`:
+  `camilladsp -s ~/camilladsp/statefile.yml -w -p 1234 -o ~/camilladsp/camilladsp.log`
+  (runs as `joshi`, FIFO priority 10).
+- Configs in `~/camilladsp/configs/`. Active: `room_eq.yml` (v4 format).
+- Devices: samplerate 192000, chunksize 1024, **rate adjust on, resampler off**.
+  The log last showed a needless 1:1 resampler with rate adjust off; this still
+  needs fixing in the config (see Open items).
+- Current filters (placeholders until REW measurements). Names contain spaces:
+  - `preamp`: Gain
+  - `bass`: Biquad Lowshelf, 100 Hz, slope 6
+  - `peq low` / `peq mid` / `peq high`: Biquad Peaking, 50 / 100 / 200 Hz, Q 2
+  - `treble`: Biquad Highshelf, 5 kHz, slope 6
+  - One Filter pipeline step on channels [0, 1].
+- v4 format names: `S16_LE`, `S24_3_LE`, `S24_4_LE`, `S32_LE`, `F32_LE`.
+  Shelves take `slope` (dB/oct) or `q`. FO variants (`LowshelfFO`) are first order.
+- Log meaning: "Capture device is stalled" = no audio from the Shield.
+
+## CamillaGUI (stock web GUI)
+
+- Bundle in `/opt/camillagui_backend`, service `camillagui.service`, port **5005**.
+- Slider shortcuts in `/opt/camillagui_backend/_internal/config/gui-config.yml`,
+  using the `config_elements: [{path: [...], reverse: false}]` format.
+  Backup: `~/camilladsp/gui-config_backup.yml`.
+- Still used from the PC for detailed work, e.g. entering REW filters.
+
+## Room EQ UI (custom)
+
+- Code in `~/roomeq-ui/` on the Pi: `server.py`, `index.html`, `manifest.json`,
+  `icon.svg`, `roomeq-ui.service`, `README.md`.
+- Service `roomeq-ui.service`, port **8080**: `python3 ~/roomeq-ui/server.py`.
+  Needs `python3-aiohttp` and `python3-yaml` (apt).
+- Data in `~/camilladsp/roomeq_ui/`: `settings.json` and `uploads/` (logo and
+  background images).
+- `index.html` is read fresh on each request, so page changes only need a
+  browser reload. `server.py` changes need `sudo systemctl restart roomeq-ui`.
+
+How it works:
+- The server talks to CamillaDSP's websocket on 1234 and serves the page and a
+  websocket at `/ws` for the screens. It pushes `state`, `levels` (~14/s),
+  `status` (1/s: state, load, capture rate, clipped, rate adjust, CPU temp),
+  `notice` and `selected` messages.
+- It keeps a **base** config (loaded from the active YAML file, edited by the
+  user) and sends an **effective** config with `SetConfigJson`. Effective =
+  base, minus switched-off filters, minus all Filter steps when bypassed, plus
+  `__roomeq_lowcut` (BiquadCombo ButterworthHighpass, order 4, 80 Hz) when
+  Sub off / Night is on. Bypass, low cut and switched-off filters are never
+  written to the YAML.
+- Save writes base back to the active YAML with PyYAML (comments are lost) and
+  keeps a `.bak` copy.
+- Commands from the page: `set_param`, `toggle_filter`, `add_band`,
+  `remove_filter`, `set_mode` (room / flat / night), `set_bypass`,
+  `set_lowcut`, `preset`, `save`, `undo`, `settings`, `reconnect`.
+- Modes: Room EQ = base; Flat = bypass; Night = base + low cut. The Bypass and
+  Sub off buttons map onto the same two flags.
+- If the YAML is edited elsewhere (CamillaGUI) while Room EQ runs, re-select
+  the preset in Room EQ, or its next change will overwrite those edits.
+
+Layout:
+- Design: slate panels (`#232a35` at adjustable opacity), coral accent
+  `#ff7a72`, cyan switches `#3ccfe0`, Manrope + JetBrains Mono.
+  Header (logo slot, mode pill, preset bar, undo / save / gear; reconnect
+  planned), a row of filter chips (on/off switch, name, short info such as
+  "LS · 100 Hz"; scrolls sideways; "+ Band" at the end), then
+  [slim EQ curve preview above the fader bank] | in/out meters. The curve is
+  only a preview (160 px tall; 96 px with no title bar on the touchscreen).
+- Fader bank (2026-10-03, replaced the cards and knobs): one vertical fader per
+  filter, styled like a hardware EQ, preamp first with a cyan cap line. Drag
+  moves the cap relative to the touch point (it never jumps); double-click
+  resets to 0 dB. Below the bank: Freq and Q (or Slope) sliders and Remove for
+  the selected band.
+- Preview without the Pi: open `index.html?demo` (made-up data, commands applied
+  in the page only). Serve `ui/` with a local static server; port 8765 is taken
+  by the journaling app, so use another port such as 8791.
+- Breakpoints: full layout above 700 px wide; a compact variant for small
+  landscape screens (`min-width: 701px and max-height: 560px`) targets the
+  800 x 480 touchscreen; phone layout at 700 px and below.
+- Appearance popover: backgrounds (carbon, plain, walnut, uploaded photo),
+  panel opacity, logo upload/remove. Tapping the logo opens it.
+- Active branding (2026-10-03): logo `assets/logos/joshs_eq.png` ("Josh's EQ"
+  fire headphones); background `assets/backgrounds/joshs_eq_dimmed.jpg`, made
+  with `scripts/make_background.py` (dimmed, blurred logo on 1920x1080). Upload
+  without the page: on the Pi,
+  `curl -F file=@<img> http://localhost:8080/upload/background` (or `/logo`).
+
+Reconnect button:
+- Fixes the Shield no longer sending after a Pi reboot (reselecting the output
+  or restarting the Shield does not help; unplugging the USB cable does).
+- `/usr/local/bin/roomeq-reconnect` stops camilladsp, `modprobe -r g_audio`,
+  waits, `modprobe g_audio`, starts camilladsp. Allowed without a password by
+  `/etc/sudoers.d/roomeq`:
+  `joshi ALL=(root) NOPASSWD: /usr/local/bin/roomeq-reconnect`
+- The server re-applies the effective config afterwards.
+
+## Touchscreen kiosk
+
+- `~/.config/autostart/camillagui.desktop` (name kept from the CamillaGUI days):
+  `Exec=sh -c "sleep 10; chromium --kiosk --noerrdialogs --password-store=basic --force-device-scale-factor=1 http://localhost:8080"`
+- `--password-store=basic` stops the keyring password prompt at boot.
+- With the Pi's keyboard: Ctrl+Shift+R hard reload, Ctrl+0 reset zoom,
+  Alt+F4 leaves kiosk mode.
+- Restart the kiosk browser remotely, no sudo (copy in `pi/bin/`):
+  `ssh joshis-pi 'nohup ~/bin/roomeq-kiosk >/dev/null 2>&1 </dev/null'`.
+  It needs `--ozone-platform=wayland` when started over SSH. Never use
+  `pkill -f chromium...` over SSH: the pattern matches the SSH command itself.
+- Prefer this to a reboot: after a reboot the Shield stops sending until the
+  USB cable is replugged (until the Reconnect feature exists), and `sudo
+  reboot` needs the user's password (SSH key login does not cover sudo).
+
+## Health checks
+
+- `systemctl status camilladsp camillagui roomeq-ui`
+- `tail -20 ~/camilladsp/camilladsp.log`
+- `aplay -l` (KEF = `Speaker`), `arecord -l` (gadget = `UAC2Gadget`)
+- `vcgencmd get_throttled` (want `0x0`), `vcgencmd measure_temp` (~56 C normal)
+- Pi status at handover: throttled 0x0, 56 C.
+
+## Open items
+
+1. ~~Compact layout on the 800 x 480 screen~~: done 2026-10-03 (new fader
+   layout deployed, kiosk restarted, checked live at 800 x 480).
+2. **Fix devices config**: confirmed 2026-10-03 that `room_eq.yml` has
+   `enable_rate_adjust: null` and a `resampler:` block. Set rate adjust on and
+   resampler off, then re-select the preset in Room EQ.
+3. **Reconnect feature: not built yet.** As of 2026-10-03 neither
+   `/usr/local/bin/roomeq-reconnect` nor `/etc/sudoers.d/roomeq` exists, and
+   neither `ui/server.py` nor `ui/index.html` has reconnect code. The design
+   under "Reconnect button" is still a plan.
+4. Room measurement with REW + UMIK-1 at the listening position, filters at
+   0 dB, sub running, then replace the placeholder filters.
+5. Possibly a larger logo area (uploaded logos are square and detailed; the
+   header slot is ~40 px tall).
+6. Once stable: enable the overlay (read-only) file system in raspi-config to
+   protect the SD card.
+
+## Working rules
+
+- Shut down with `sudo shutdown now` or `sudo reboot`; never pull power while
+  running (an interrupted first boot already corrupted the card once).
+- Keep chunksize 1024 and the 192 kHz / S32_LE gadget settings unless the user
+  asks otherwise.
+- Explain changes in plain language; the user is comfortable with the terminal
+  but new to Linux audio.

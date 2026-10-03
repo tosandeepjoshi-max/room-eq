@@ -1,0 +1,10 @@
+{
+  "name": "Room EQ",
+  "short_name": "Room EQ",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1b2029",
+  "theme_color": "#1b2029",
+  "icons": [{"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}

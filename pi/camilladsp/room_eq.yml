@@ -1,0 +1,98 @@
+description: null
+devices:
+  adjust_period: null
+  capture:
+    channels: 2
+    device: hw:CARD=UAC2Gadget,DEV=0
+    format: S32_LE
+    labels: null
+    link_mute_control: null
+    link_volume_control: null
+    stop_on_inactive: null
+    type: Alsa
+  capture_samplerate: 192000
+  chunksize: 1024
+  enable_rate_adjust: null
+  multithreaded: null
+  playback:
+    channels: 2
+    device: hw:CARD=Speaker,DEV=0
+    format: S24_3_LE
+    type: Alsa
+  queuelimit: null
+  rate_measure_interval: null
+  resampler:
+    profile: Balanced
+    type: AsyncSinc
+  samplerate: 192000
+  silence_threshold: null
+  silence_timeout: null
+  stop_on_rate_change: null
+  target_level: null
+  volume_limit: null
+  volume_ramp_time: null
+  worker_threads: null
+filters:
+  bass:
+    description: null
+    parameters:
+      freq: 100
+      gain: 6.5
+      slope: 6
+      type: Lowshelf
+    type: Biquad
+  peq high:
+    description: null
+    parameters:
+      freq: 200
+      gain: 2.5
+      q: 2
+      type: Peaking
+    type: Biquad
+  peq low:
+    description: null
+    parameters:
+      freq: 50
+      gain: 3
+      q: 2
+      type: Peaking
+    type: Biquad
+  peq mid:
+    description: null
+    parameters:
+      freq: 100
+      gain: -0.5
+      q: 2
+      type: Peaking
+    type: Biquad
+  preamp:
+    description: null
+    parameters:
+      gain: 0
+      inverted: false
+      mute: false
+      scale: dB
+    type: Gain
+  treble:
+    description: null
+    parameters:
+      freq: 5000
+      gain: 5
+      q: 0.7
+      type: Peaking
+    type: Biquad
+mixers: {}
+pipeline:
+- bypassed: null
+  channels: null
+  description: null
+  names:
+  - preamp
+  - bass
+  - peq low
+  - peq mid
+  - peq high
+  - treble
+  type: Filter
+processors: {}
+title: null

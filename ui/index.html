@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b2029">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg">
+<title>Room EQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1b2029; --panel-rgb:35,42,53; --alpha:.9; --raised:#2c3542; --line:#3a4555; --sunk:#1c232d;
+  --plot:#161b22; --text:#e8edf3; --muted:#9aa6b5; --coral:#ff7a72; --cyan:#3ccfe0;
+  --sans:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'DejaVu Sans Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body.bg-carbon{background:repeating-linear-gradient(135deg,#1b2029 0 6px,#1f2530 6px 12px)}
+body.bg-plain{background:#1b2029}
+body.bg-walnut{background:repeating-linear-gradient(90deg,#3b2617 0 7px,#4a2f1c 7px 11px,#34200f 11px 16px)}
+body.bg-custom{background:#1b2029 center/cover no-repeat fixed}
+button{font-family:inherit;color:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.panel{background:rgba(var(--panel-rgb),var(--alpha));border-radius:12px}
+.app{height:100vh;height:100dvh;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));display:grid;grid-template-rows:56px 40px minmax(0,1fr);gap:12px}
+
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 10px 0 14px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo-slot{width:132px;height:40px;border:2px dashed #4a5668;border-radius:8px;background:transparent;color:var(--muted);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;flex:none}
+.logo-btn{border:0;background:transparent;padding:0;cursor:pointer;border-radius:8px;flex:none}
+.logo-img{height:40px;max-width:160px;object-fit:contain;display:block;flex:none}
+.title{display:flex;flex-direction:column;line-height:1}
+.title b{font-size:18px;font-weight:800}
+.title span{font-size:11px;color:var(--muted);margin-top:4px;font-weight:600}
+.seg{display:flex;gap:2px;background:var(--sunk);border-radius:999px;padding:4px}
+.seg button{font-size:14px;font-weight:600;color:var(--muted);background:transparent;border:0;border-radius:999px;height:40px;padding:0 18px;cursor:pointer}
+.seg button.on{background:var(--line);color:var(--text)}
+.preset{display:flex;align-items:center;background:var(--sunk);border-radius:999px;padding:2px 4px 2px 14px;width:260px;gap:4px}
+.preset select{flex:1;min-width:0;background:transparent;border:0;color:var(--text);font:600 14px var(--sans);height:40px;cursor:pointer;appearance:none;-webkit-appearance:none}
+.preset select option{background:var(--raised)}
+.ico{width:44px;height:44px;border:0;background:transparent;color:#c7d0db;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;padding:0;position:relative;flex:none}
+.ico:disabled{opacity:.35;cursor:default}
+.ico.on{background:var(--line);color:var(--coral)}
+.ico .dot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--coral)}
+.status{display:flex;align-items:center;gap:8px;font:13px var(--mono);color:var(--muted);margin-right:6px;white-space:nowrap}
+.status i{width:8px;height:8px;border-radius:50%;background:#6b7685;display:inline-block}
+.status i.run{background:#46d39a;box-shadow:0 0 8px #46d39a}
+.hright{display:flex;align-items:center;gap:2px}
+
+/* filter chips: on/off switch + short info */
+.chips{display:flex;gap:8px;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;align-items:center}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:40px;display:flex;align-items:center;gap:8px;padding:0 14px 0 8px;background:var(--raised);border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:13px;white-space:nowrap}
+.chip.sel{border-color:var(--coral);background:#36424f}
+.chip b{font-weight:700}
+.chip small{font:11px var(--mono);color:var(--muted)}
+.chip.off b,.chip.off small{opacity:.45}
+.sw{position:relative;width:38px;height:24px;border-radius:999px;border:0;padding:0;background:#4a5668;cursor:pointer;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#e8edf3;transition:transform .15s}
+.sw[aria-checked=true]{background:var(--cyan)}
+.sw[aria-checked=true]::after{transform:translateX(14px)}
+.addchip{flex:none;height:40px;padding:0 14px;border:2px dashed var(--line);border-radius:999px;background:transparent;color:var(--muted);font:600 13px var(--sans);cursor:pointer;display:flex;align-items:center;gap:6px}
+
+/* main */
+.main{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:12px;min-height:0}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:0}
+.stage .plot{flex:none;height:160px}
+.stage .mixer{flex:1}
+
+/* fader bank, styled like a hardware graphic EQ */
+.mixer{padding:12px;display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}
+.strips{flex:1;display:flex;gap:4px;min-height:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.strips::-webkit-scrollbar{display:none}
+.strip{flex:1 1 0;min-width:54px;max-width:96px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;border-radius:8px;cursor:pointer}
+.strip.pre{margin-right:6px;box-shadow:6px 0 0 -5px var(--line)}
+.strip.sel{background:rgba(255,122,114,.1);box-shadow:inset 0 0 0 1px var(--coral)}
+.strip.off .fader,.strip.off .sval,.strip.off .sname{opacity:.4}
+.sval{font:600 12px var(--mono)}
+.fader{position:relative;flex:1;width:100%;min-height:70px;touch-action:none;cursor:ns-resize;border-radius:6px}
+.fader::before{content:"";position:absolute;left:50%;top:10px;bottom:10px;width:6px;margin-left:-3px;border-radius:3px;background:#0d1015;box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06)}
+.fader.none::before{opacity:.35}
+.tick{position:absolute;left:6px;right:6px;height:1px;background:linear-gradient(90deg,#4a5668 0 10px,transparent 10px calc(100% - 10px),#4a5668 calc(100% - 10px))}
+.tick.zero{background:linear-gradient(90deg,#8794a6 0 13px,transparent 13px calc(100% - 13px),#8794a6 calc(100% - 13px))}
+.fcap{position:absolute;left:50%;width:38px;height:24px;margin:-12px 0 0 -19px;border-radius:4px;background:linear-gradient(#5d6878,#3b4553 46%,#2a313c 54%,#495362);box-shadow:0 4px 8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.18);pointer-events:none}
+.fcap::after{content:"";position:absolute;left:4px;right:4px;top:50%;height:2px;margin-top:-1px;background:#f5f7fa;border-radius:1px}
+.strip.sel .fcap::after{background:var(--coral)}
+.strip.pre .fcap::after{background:var(--cyan)}
+.sname{font-size:11px;font-weight:700;max-width:100%;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sfreq{font:10px var(--mono);color:var(--muted);white-space:nowrap}
+.detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end;border-top:1px solid var(--line);padding-top:10px;min-width:0}
+.ctl{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ctl label{display:flex;justify-content:space-between;gap:6px;font-size:12px}
+.ctl label span:first-child{color:var(--muted)}
+.ctl label span:last-child{font-family:var(--mono)}
+.detail .hint{grid-column:1 / 3;margin:0}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;touch-action:none}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:#0d1015;border-radius:3px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:var(--text);border:3px solid var(--coral)}
+input[type=range]::-moz-range-track{height:6px;background:#0d1015;border-radius:3px}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--text);border:3px solid var(--coral)}
+.textbtn{border:1px solid #4a5668;background:transparent;color:var(--text);border-radius:10px;height:40px;padding:0 14px;font-size:13px;font-weight:600;cursor:pointer}
+.empty{color:var(--muted);font-size:14px;text-align:center;margin:auto 0;line-height:1.5}
+
+.plot{background:var(--plot);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
+.plothead{height:38px;background:rgba(var(--panel-rgb),1);display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--raised);font-size:13px;font-weight:600}
+.plothead span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.plothead span:last-child{font:12px var(--mono);color:var(--muted);flex:none;margin-left:8px}
+.plotbody{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 34px;padding:14px 6px 0 14px;min-height:0}
+.curve{position:relative;touch-action:none}
+.curve svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.marker{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#f5f7fa;pointer-events:none}
+.marker::before{content:"";position:absolute;top:-4px;left:-7px;width:16px;height:30px;border-radius:8px;background:var(--plot);border:2px solid #f5f7fa;box-sizing:border-box}
+.node{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border:0;background:transparent;padding:0;cursor:grab;touch-action:none}
+.node::after{content:"";position:absolute;left:7px;top:7px;width:16px;height:16px;border-radius:50%;background:var(--sunk);border:3px solid var(--text);box-sizing:border-box}
+.node.sel::after{left:4px;top:4px;width:22px;height:22px;background:var(--coral);border-color:#fff}
+.node.off{opacity:.4}
+.dbaxis{position:relative;font:11px var(--mono);color:var(--muted)}
+.dbaxis span{position:absolute;left:6px;transform:translateY(-50%)}
+.faxis{position:relative;height:30px;margin:0 40px 0 14px;font:11px var(--mono);color:var(--muted)}
+.faxis span{position:absolute;top:8px;transform:translateX(-50%)}
+
+.meters{padding:14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.readout{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;font:12px var(--mono);text-align:center;row-gap:2px}
+.readout .tag{font:700 11px var(--sans);background:var(--sunk);border-radius:6px;padding:2px 6px}
+.readout .rms{color:var(--muted)}
+.readout .cap{font:11px var(--sans);color:var(--muted)}
+.bars{flex:1;display:grid;grid-template-columns:14px 14px 1fr 14px 14px;gap:6px;padding:0 8px;min-height:0}
+.bar{position:relative;background:var(--sunk);border-radius:3px;overflow:hidden}
+.bar .pk,.bar .rm{position:absolute;left:0;right:0;bottom:0;height:0}
+.bar .pk{background:#6d7a8c}
+.bar .rm{background:#b9c3cf}
+.bar.clip .pk{background:var(--coral)}
+.scale{display:flex;flex-direction:column;justify-content:space-between;align-items:center;font:10px var(--mono);color:var(--muted)}
+.io{display:flex;justify-content:space-between;padding:0 8px;font-size:11px;color:var(--muted);font-weight:700}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:10px;overflow:hidden}
+.btnrow button{font-size:14px;font-weight:600;background:var(--line);border:0;height:44px;cursor:pointer}
+.btnrow button[aria-pressed=true]{background:var(--coral);color:#2a0f0d}
+.mfoot{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+
+/* appearance popover */
+.pop{position:fixed;top:84px;right:20px;width:316px;background:var(--raised);border:1px solid #4a5668;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.55);padding:16px;display:none;flex-direction:column;gap:12px;z-index:10}
+.pop.open{display:flex}
+.pop h2{font-size:15px;margin:0}
+.pop h3{font-size:12px;color:var(--muted);margin:2px 0 0;font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{display:flex;flex-direction:column;gap:4px;align-items:center;font-size:11px;color:var(--muted);background:transparent;border:0;padding:0;cursor:pointer}
+.tile i{display:block;width:100%;height:56px;border-radius:8px;border:2px solid var(--line);background-size:cover;background-position:center}
+.tile[aria-pressed=true] i{border-color:var(--coral)}
+.tile.up i{border-style:dashed;display:flex;align-items:center;justify-content:center;color:#c7d0db}
+.poprow{display:flex;gap:10px}
+.poprow button{flex:1;height:44px;border-radius:10px;border:0;background:var(--line);font-size:14px;font-weight:600;cursor:pointer}
+.poprow button.ghost{background:transparent;border:1px solid #4a5668}
+.hint{font-size:11px;color:var(--muted);line-height:1.4}
+.op label{display:flex;justify-content:space-between;font-size:13px}
+.op label span:first-child{color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#4a1f1c;border:1px solid var(--coral);color:var(--text);padding:10px 16px;border-radius:10px;font-size:13px;max-width:80vw;display:none;z-index:20}
+.toast.show{display:block}
+.offline{position:fixed;inset:0;background:rgba(15,18,23,.8);display:none;align-items:center;justify-content:center;font-size:16px;z-index:30;text-align:center;padding:24px;line-height:1.5}
+.offline.show{display:flex}
+
+/* phone */
+@media (max-width: 700px){
+  body{overflow:auto}
+  .app{height:auto;grid-template-rows:auto auto auto}
+  header{flex-wrap:wrap;padding:10px;row-gap:10px}
+  .seg{order:3;flex:1 1 100%;justify-content:center}
+  .seg button{flex:1}
+  .preset{order:4;flex:1 1 100%;width:auto}
+  .status{display:none}
+  .logo-slot{width:96px}
+  .main{grid-template-columns:minmax(0,1fr) 110px}
+  .stage .plot{height:150px}
+  .dbaxis span:nth-child(-n+2),.dbaxis span:nth-child(4){display:none}
+  .stage .mixer{flex:none;height:380px}
+  .meters{height:auto}
+  .readout{font-size:10px}
+  #lcinfo{display:none}
+  .mfoot{justify-content:center}
+  .pop{left:16px;right:16px;width:auto;top:70px}
+}
+@media (max-width: 480px){
+  .main{grid-template-columns:1fr}
+  .meters{height:300px}
+  .detail{grid-template-columns:1fr 1fr}
+  .detail .textbtn{grid-column:1 / 3}
+}
+/* small landscape screens such as an 800x480 touchscreen */
+@media (min-width: 701px) and (max-height: 560px){
+  .app{padding:8px;gap:8px;grid-template-rows:46px 34px minmax(0,1fr)}
+  header{padding:0 4px 0 8px;gap:8px}
+  .brand{gap:8px}
+  .logo-img{height:34px;max-width:110px}
+  .logo-slot{width:84px;height:34px;font-size:11px}
+  .logo-slot svg{display:none}
+  .title b{font-size:15px}
+  .title span{display:none}
+  .seg{padding:3px}
+  .seg button{height:34px;padding:0 12px;font-size:13px}
+  .preset{width:190px;padding-left:10px}
+  .preset select{height:34px;font-size:13px}
+  .preset > svg{display:none}
+  .ico{width:38px;height:38px}
+  .status{display:none}
+  .chips{gap:6px}
+  .chip,.addchip{height:34px;font-size:12px}
+  .chip{padding:0 12px 0 6px;gap:6px}
+  .sw{width:34px;height:22px}
+  .sw::after{width:16px;height:16px}
+  .sw[aria-checked=true]::after{transform:translateX(12px)}
+  .main{grid-template-columns:minmax(0,1fr) 124px;gap:8px}
+  .stage{gap:8px}
+  .stage .plot{height:96px}
+  .plothead{display:none}
+  .dbaxis span:nth-child(-n+2),.dbaxis span:nth-child(4){display:none}
+  .mixer{padding:8px;gap:6px}
+  .strip{width:46px;padding:4px 0}
+  .strip.pre{margin-right:4px}
+  .fcap{width:34px;height:20px;margin:-10px 0 0 -17px}
+  .sval{font-size:11px}
+  .sname{font-size:10px}
+  .detail{gap:8px;padding-top:6px}
+  .ctl label{font-size:11px}
+  input[type=range]{height:24px}
+  .textbtn{height:34px;font-size:12px;padding:0 10px}
+  .plothead{height:30px;font-size:12px;padding:0 10px}
+  #plotinfo{display:none}
+  .plotbody{padding:8px 4px 0 10px}
+  .faxis{height:18px;margin:0 38px 0 10px}
+  .faxis span{top:2px;font-size:10px}
+  .meters{padding:10px;gap:6px}
+  .readout{font-size:10px}
+  .readout .cap{font-size:9px}
+  .bars{gap:4px;padding:0 4px;grid-template-columns:12px 12px 1fr 12px 12px}
+  .btnrow button{height:38px;font-size:13px}
+  #lcinfo{display:none}
+  .mfoot{justify-content:center}
+  .pop{top:56px;right:8px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body class="bg-carbon">
+<div class="app">
+  <header class="panel">
+    <div class="brand">
+      <span id="logo"></span>
+      <div class="title"><b>Room EQ</b><span>CamillaDSP</span></div>
+    </div>
+    <div class="seg" role="group" aria-label="Mode">
+      <button type="button" data-mode="room">Room EQ</button>
+      <button type="button" data-mode="flat">Flat</button>
+      <button type="button" data-mode="night">Night</button>
+    </div>
+    <div class="preset">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#9aa6b5" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>
+      <select id="preset" aria-label="Preset"></select>
+      <button class="ico" id="prev" type="button" aria-label="Previous preset"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M16 5 L7 12 L16 19 Z"/></svg></button>
+      <button class="ico" id="next" type="button" aria-label="Next preset"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5 L17 12 L8 19 Z"/></svg></button>
+    </div>
+    <div class="hright">
+      <span class="status"><i id="sdot"></i><span id="stext">Connecting</span></span>
+      <button class="ico" id="undo" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 7 L4 12 L9 17"/><path d="M4 12 H15 A5 5 0 0 1 15 22"/></svg></button>
+      <button class="ico" id="save" type="button" aria-label="Save to config file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M5 3 H16 L21 8 V21 H3 V3 Z"/><path d="M7 3 V9 H15 V3"/><rect x="7" y="13" width="10" height="6"/></svg><span class="dot" id="dirtydot" hidden></span></button>
+      <button class="ico" id="gear" type="button" aria-label="Appearance" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M4.9 4.9 L7 7 M17 17 L19.1 19.1 M4.9 19.1 L7 17 M17 7 L19.1 4.9"/></svg></button>
+    </div>
+  </header>
+
+  <section class="chips" id="chips" aria-label="Filters"></section>
+
+  <div class="main">
+
+    <div class="stage">
+    <section class="plot" aria-label="EQ curve">
+      <div class="plothead"><span id="plottitle">EQ curve</span><span id="plotinfo"></span></div>
+      <div class="plotbody">
+        <div class="curve" id="curve">
+          <svg viewBox="0 0 1000 260" preserveAspectRatio="none" aria-hidden="true">
+            <g stroke="#262e38" stroke-width="1" id="grid"></g>
+            <line x1="0" y1="130" x2="1000" y2="130" stroke="#3a4555" stroke-width="1" vector-effect="non-scaling-stroke"/>
+            <path id="cfill" fill="rgba(255,122,114,.45)"/>
+            <path id="cline" fill="none" stroke="#f5f7fa" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="marker" id="marker" hidden></div>
+          <div id="nodes"></div>
+        </div>
+        <div class="dbaxis"><span style="top:6px">dB</span><span style="top:25%">+7.5</span><span style="top:50%">0</span><span style="top:75%">−7.5</span><span style="top:calc(100% - 6px)">−15</span></div>
+      </div>
+      <div class="faxis" id="faxis"></div>
+    </section>
+    <section class="panel mixer" aria-label="EQ faders">
+      <div class="strips" id="strips"></div>
+      <div class="detail" id="detail"></div>
+    </section>
+    </div>
+
+    <section class="panel meters" aria-label="Levels">
+      <div class="readout">
+        <span id="inpk">–</span><span class="tag">I/O</span><span id="outpk">–</span>
+        <span class="rms" id="inrms">–</span><span class="cap">Peak / RMS</span><span class="rms" id="outrms">–</span>
+      </div>
+      <div class="bars">
+        <div class="bar" id="b0"><div class="pk"></div><div class="rm"></div></div>
+        <div class="bar" id="b1"><div class="pk"></div><div class="rm"></div></div>
+        <div class="scale"><span>0</span><span>−10</span><span>−20</span><span>−30</span><span>−40</span><span>−50</span><span>−60</span></div>
+        <div class="bar" id="b2"><div class="pk"></div><div class="rm"></div></div>
+        <div class="bar" id="b3"><div class="pk"></div><div class="rm"></div></div>
+      </div>
+      <div class="io"><span>IN</span><span>OUT</span></div>
+      <div class="btnrow">
+        <button type="button" id="bypass" aria-pressed="false">Bypass</button>
+        <button type="button" id="subcut" aria-pressed="false">Sub off</button>
+      </div>
+      <div class="mfoot"><span id="lcinfo">Sub off cuts below 80 Hz</span><span id="clip">Clip 0</span></div>
+    </section>
+  </div>
+</div>
+
+<section class="pop" id="pop" aria-label="Appearance">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h2>Appearance</h2>
+    <button class="ico" id="popclose" type="button" aria-label="Close" style="width:36px;height:36px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+  </div>
+  <h3>Background</h3>
+  <div class="tiles" id="tiles">
+    <button class="tile" type="button" data-bg="carbon"><i style="background:repeating-linear-gradient(135deg,#1b2029 0 6px,#1f2530 6px 12px)"></i>Carbon</button>
+    <button class="tile" type="button" data-bg="plain"><i style="background:#1b2029"></i>Plain</button>
+    <button class="tile" type="button" data-bg="walnut"><i style="background:repeating-linear-gradient(90deg,#3b2617 0 7px,#4a2f1c 7px 11px,#34200f 11px 16px)"></i>Walnut</button>
+    <button class="tile up" type="button" data-bg="custom" id="customtile"><i><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></i><span id="customlabel">Upload</span></button>
+  </div>
+  <div class="op">
+    <label for="opacity"><span>Panel opacity</span><span id="opval">90%</span></label>
+    <input type="range" id="opacity" min="40" max="100" step="1" value="90">
+  </div>
+  <h3>Logo</h3>
+  <div class="poprow">
+    <button type="button" id="logoup">Upload logo</button>
+    <button type="button" class="ghost" id="logorm">Remove</button>
+  </div>
+  <p class="hint" style="margin:0">PNG or SVG with transparency works best, about 264 × 80 px. Background photos look best at 1280 × 720 or larger.</p>
+  <button type="button" class="ghost" id="bgrm" style="height:40px;border-radius:10px;border:1px solid #4a5668;background:transparent;font-size:13px;font-weight:600;cursor:pointer">Remove uploaded background</button>
+  <input type="file" id="logofile" accept="image/*" hidden>
+  <input type="file" id="bgfile" accept="image/*" hidden>
+</section>
+
+<div class="toast" id="toast" role="alert"></div>
+<div class="offline" id="offline">Can't reach the Pi. Reconnecting…</div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const MINUS = '\u2212';
+const DB_RANGE = 15;
+const W = 1000, H = 260, MID = 130;
+const FREQS = Array.from({length: 240}, (_, i) => 20 * Math.pow(1000, i / 239));
+
+let model = null, pending = null, status = {}, selected = null, dragging = false;
+let ws = null, stripsKey = '', detailKey = '';
+// index.html?demo runs on made-up data without a server, for previewing layout changes off the Pi.
+const DEMO = new URLSearchParams(location.search).has('demo');
+
+/* ---------- connection ---------- */
+function connect() {
+  if (DEMO) { startDemo(); return; }
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => $('offline').classList.remove('show');
+  ws.onclose = () => { $('offline').classList.add('show'); setTimeout(connect, 1500); };
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'state') { if (dragging) pending = msg; else setModel(msg); }
+    else if (msg.type === 'levels') drawLevels(msg);
+    else if (msg.type === 'status') { status = msg; drawStatus(); }
+    else if (msg.type === 'selected') { selected = msg.name; detailKey = ''; if (model) render(); }
+  };
+}
+function send(obj) {
+  if (DEMO) { demoCommand(obj); return; }
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+}
+
+/* ---------- demo mode (no server; commands are applied locally) ---------- */
+function startDemo() {
+  const bq = (type, freq, gain, extra) => ({ type: 'Biquad', parameters: { type, freq, gain, ...extra }, enabled: true });
+  const filters = [
+    { name: 'preamp', type: 'Gain', parameters: { gain: -3 }, enabled: true },
+    { name: 'bass', ...bq('Lowshelf', 100, 3, { slope: 6 }) },
+    { name: 'peq low', ...bq('Peaking', 50, -4, { q: 2 }) },
+    { name: 'peq mid', ...bq('Peaking', 100, -2, { q: 2 }) },
+    { name: 'peq high', ...bq('Peaking', 200, 1.5, { q: 2 }) },
+    { name: 'treble', ...bq('Highshelf', 5000, -1, { slope: 6 }) },
+  ];
+  setModel({ type: 'state', config_name: 'room_eq.yml', presets: ['movie.yml', 'room_eq.yml'], filters, samplerate: 192000,
+    bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9 } });
+  status = { state: 'Running', capture_rate: 192000, temp: 56, load: 12, clipped: 0 }; drawStatus();
+  let t = 0;
+  setInterval(() => {
+    t += 0.07;
+    const pk = [0, 1].map((c) => -14 + 6 * Math.sin(t * 3 + c) - Math.random() * 4);
+    const rm = pk.map((v) => v - 8);
+    drawLevels({ capture_peak: pk, capture_rms: rm, playback_peak: pk.map((v) => v - 3), playback_rms: rm.map((v) => v - 3) });
+  }, 70);
+}
+function demoCommand(obj) {
+  const m = model, f = obj.name && m.filters.find((x) => x.name === obj.name);
+  m.can_undo = true;
+  switch (obj.cmd) {
+    case 'set_param': m.dirty = true; drawHeader(); return;
+    case 'toggle_filter': if (f) f.enabled = !f.enabled; break;
+    case 'add_band': {
+      let i = 1; while (m.filters.some((x) => x.name === `band ${i}`)) i++;
+      m.filters.push({ name: `band ${i}`, type: 'Biquad', parameters: { type: 'Peaking', freq: obj.freq, gain: 0, q: 1.41 }, enabled: true });
+      selected = `band ${i}`; m.dirty = true; break;
+    }
+    case 'remove_filter': m.filters = m.filters.filter((x) => x !== f); m.dirty = true; break;
+    case 'set_mode': m.bypass = obj.mode === 'flat'; if (obj.mode !== 'flat') m.lowcut = obj.mode === 'night'; break;
+    case 'set_bypass': m.bypass = obj.value; break;
+    case 'set_lowcut': m.lowcut = obj.value; break;
+    case 'settings': Object.assign(m.settings, obj.values); break;
+    case 'save': m.dirty = false; break;
+    default: return;
+  }
+  setModel(m);
+}
+
+/* ---------- formatting ---------- */
+const fmtDb = (v, d = 1) => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v).toFixed(d);
+const fmtHz = (f) => f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 0 : 1).replace(/\.0$/, '') + ' kHz' : Math.round(f) + ' Hz';
+const xOf = (f) => Math.log10(f / 20) / 3 * W;
+const yOf = (db) => MID - db * MID / DB_RANGE;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/* ---------- filter helpers ---------- */
+function kindOf(f) { return (f.type === 'Biquad' || f.type === 'BiquadCombo') ? f.parameters.type : f.type; }
+const KIND_LABEL = { Peaking: 'Peak', Lowshelf: 'Low shelf', Highshelf: 'High shelf', LowshelfFO: 'Low shelf', HighshelfFO: 'High shelf',
+  Highpass: 'High-pass', Lowpass: 'Low-pass', HighpassFO: 'High-pass', LowpassFO: 'Low-pass', Notch: 'Notch', Bandpass: 'Band-pass',
+  Gain: 'Gain', FivePointPeq: '5-band PEQ', ButterworthHighpass: 'High-pass', ButterworthLowpass: 'Low-pass',
+  LinkwitzRileyHighpass: 'High-pass', LinkwitzRileyLowpass: 'Low-pass', Volume: 'Volume', Delay: 'Delay', Conv: 'Convolution' };
+const hasGain = (f) => f.parameters && typeof f.parameters.gain === 'number';
+const hasFreq = (f) => f.parameters && typeof f.parameters.freq === 'number';
+function preampFilter() { return model ? model.filters.find((f) => f.type === 'Gain') : null; }
+function gainRange(f) { return f.type === 'Gain' ? [-30, 10] : [-15, 15]; }
+
+/* ---------- response math (RBJ cookbook, as CamillaDSP uses) ---------- */
+function coefs(kind, p, fs) {
+  const w = 2 * Math.PI * p.freq / fs, cw = Math.cos(w), sw = Math.sin(w);
+  const A = Math.pow(10, (p.gain || 0) / 40);
+  let alpha;
+  switch (kind) {
+    case 'Peaking':
+      alpha = p.q ? sw / (2 * p.q) : sw * Math.sinh(Math.LN2 / 2 * (p.bandwidth || 1) * w / sw);
+      return [1 + alpha * A, -2 * cw, 1 - alpha * A, 1 + alpha / A, -2 * cw, 1 - alpha / A];
+    case 'Lowshelf': case 'Highshelf': {
+      if (p.q) alpha = sw / (2 * p.q);
+      else { const S = (p.slope || 6) / 12; alpha = sw / 2 * Math.sqrt((A + 1 / A) * (1 / S - 1) + 2); }
+      const sa = 2 * Math.sqrt(A) * alpha;
+      return kind === 'Lowshelf'
+        ? [A * ((A + 1) - (A - 1) * cw + sa), 2 * A * ((A - 1) - (A + 1) * cw), A * ((A + 1) - (A - 1) * cw - sa), (A + 1) + (A - 1) * cw + sa, -2 * ((A - 1) + (A + 1) * cw), (A + 1) + (A - 1) * cw - sa]
+        : [A * ((A + 1) + (A - 1) * cw + sa), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - sa), (A + 1) - (A - 1) * cw + sa, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - sa];
+    }
+    case 'Highpass': alpha = sw / (2 * (p.q || 0.707)); return [(1 + cw) / 2, -(1 + cw), (1 + cw) / 2, 1 + alpha, -2 * cw, 1 - alpha];
+    case 'Lowpass': alpha = sw / (2 * (p.q || 0.707)); return [(1 - cw) / 2, 1 - cw, (1 - cw) / 2, 1 + alpha, -2 * cw, 1 - alpha];
+    case 'Notch': alpha = sw / (2 * (p.q || 1)); return [1, -2 * cw, 1, 1 + alpha, -2 * cw, 1 - alpha];
+    case 'Bandpass': alpha = sw / (2 * (p.q || 1)); return [alpha, 0, -alpha, 1 + alpha, -2 * cw, 1 - alpha];
+  }
+  return null;
+}
+function biquadDb(c, f, fs) {
+  const w = 2 * Math.PI * f / fs, c1 = Math.cos(w), s1 = Math.sin(w), c2 = Math.cos(2 * w), s2 = Math.sin(2 * w);
+  const nr = c[0] + c[1] * c1 + c[2] * c2, ni = -(c[1] * s1 + c[2] * s2);
+  const dr = c[3] + c[4] * c1 + c[5] * c2, di = -(c[4] * s1 + c[5] * s2);
+  return 10 * Math.log10((nr * nr + ni * ni) / (dr * dr + di * di));
+}
+function filterDb(f, fs) {
+  const p = f.parameters || {}, kind = kindOf(f);
+  const out = new Float64Array(FREQS.length);
+  if (!p) return out;
+  const c = hasFreq(f) ? coefs(kind, p, fs) : null;
+  for (let i = 0; i < FREQS.length; i++) {
+    const fr = FREQS[i];
+    if (fr >= fs / 2) { out[i] = out[i - 1] || 0; continue; }
+    if (c) { out[i] = biquadDb(c, fr, fs); continue; }
+    const x = p.freq ? fr / p.freq : 1, G = Math.pow(10, (p.gain || 0) / 20);
+    switch (kind) {
+      case 'LowshelfFO': out[i] = 10 * Math.log10((x * x + G) / (x * x + 1 / G)); break;
+      case 'HighshelfFO': out[i] = 10 * Math.log10((G * G * x * x + G) / (x * x + G)); break;
+      case 'HighpassFO': out[i] = 10 * Math.log10(x * x / (1 + x * x)); break;
+      case 'LowpassFO': out[i] = 10 * Math.log10(1 / (1 + x * x)); break;
+      case 'ButterworthHighpass': out[i] = -10 * Math.log10(1 + Math.pow(1 / x, 2 * (p.order || 2))); break;
+      case 'ButterworthLowpass': out[i] = -10 * Math.log10(1 + Math.pow(x, 2 * (p.order || 2))); break;
+      case 'LinkwitzRileyHighpass': out[i] = -20 * Math.log10(1 + Math.pow(1 / x, p.order || 4)); break;
+      case 'LinkwitzRileyLowpass': out[i] = -20 * Math.log10(1 + Math.pow(x, p.order || 4)); break;
+      case 'FivePointPeq': {
+        const parts = [['Lowshelf', { freq: p.fls, gain: p.gls, q: p.qls }], ['Peaking', { freq: p.fp1, gain: p.gp1, q: p.qp1 }],
+          ['Peaking', { freq: p.fp2, gain: p.gp2, q: p.qp2 }], ['Peaking', { freq: p.fp3, gain: p.gp3, q: p.qp3 }],
+          ['Highshelf', { freq: p.fhs, gain: p.ghs, q: p.qhs }]];
+        let s = 0;
+        for (const [k, pp] of parts) if (pp.freq) s += biquadDb(coefs(k, pp, fs), fr, fs);
+        out[i] = s; break;
+      }
+      default: out[i] = 0;
+    }
+  }
+  return out;
+}
+function totalResponse() {
+  const fs = model.samplerate || 48000, tot = new Float64Array(FREQS.length);
+  if (model.bypass) return tot;
+  for (const f of model.filters) {
+    if (!f.enabled || f.type === 'Gain') continue;
+    const r = filterDb(f, fs);
+    for (let i = 0; i < tot.length; i++) tot[i] += r[i];
+  }
+  if (model.lowcut) {
+    const r = filterDb({ type: 'BiquadCombo', parameters: { type: 'ButterworthHighpass', freq: model.lowcut_freq, order: 4 } }, fs);
+    for (let i = 0; i < tot.length; i++) tot[i] += r[i];
+  }
+  return tot;
+}
+function responseAt(freq, tot) {
+  const t = Math.log10(freq / 20) / 3 * (FREQS.length - 1), i = clamp(Math.floor(t), 0, FREQS.length - 2);
+  return tot[i] + (tot[i + 1] - tot[i]) * (t - i);
+}
+
+/* ---------- icons ---------- */
+const PLUS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const SHORT = { Peaking: 'PK', Lowshelf: 'LS', Highshelf: 'HS', LowshelfFO: 'LS', HighshelfFO: 'HS', Highpass: 'HP', Lowpass: 'LP',
+  HighpassFO: 'HP', LowpassFO: 'LP', ButterworthHighpass: 'HP', ButterworthLowpass: 'LP', LinkwitzRileyHighpass: 'HP',
+  LinkwitzRileyLowpass: 'LP', Notch: 'N', Bandpass: 'BP' };
+function chipInfo(f) {
+  const p = f.parameters || {};
+  if (f.type === 'Gain') return fmtDb(p.gain) + ' dB';
+  return [SHORT[kindOf(f)], hasFreq(f) && fmtHz(p.freq)].filter(Boolean).join(' · ') || KIND_LABEL[kindOf(f)] || f.type;
+}
+
+/* ---------- rendering ---------- */
+function setModel(m) {
+  model = m;
+  if (!model.filters.some((f) => f.name === selected)) {
+    const first = model.filters.find((f) => f.type !== 'Gain') || model.filters[0];
+    selected = first ? first.name : null;
+  }
+  if (m.error) toast(m.error);
+  render();
+}
+function render() {
+  if (!model) return;
+  const key = model.filters.map((f) => `${f.name}|${f.enabled}|${kindOf(f)}`).join(';');
+  drawHeader(); drawChips();
+  if (key !== stripsKey) { stripsKey = key; buildStrips(); }
+  if (key + '#' + selected !== detailKey) { detailKey = key + '#' + selected; buildDetail(); buildNodes(); }
+  updateMixer(); drawCurve(); applySettings();
+}
+function select(name) { if (selected !== name) { selected = name; render(); } }
+function drawHeader() {
+  const mode = model.bypass ? 'flat' : model.lowcut ? 'night' : 'room';
+  document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+  const sel = $('preset');
+  const opts = model.presets.map((p) => `<option value="${esc(p)}">${esc(p.replace(/\.ya?ml$/, ''))}</option>`).join('');
+  if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
+  sel.value = model.config_name || '';
+  $('undo').disabled = !model.can_undo;
+  $('dirtydot').hidden = !model.dirty;
+  $('save').setAttribute('aria-label', model.dirty ? 'Save changes to config file (unsaved changes)' : 'Save to config file');
+  $('bypass').setAttribute('aria-pressed', model.bypass);
+  $('subcut').setAttribute('aria-pressed', model.lowcut);
+  $('lcinfo').textContent = `Sub off cuts below ${model.lowcut_freq} Hz`;
+  $('plotinfo').textContent = model.bypass ? 'Bypassed' : model.lowcut ? `Low cut ${model.lowcut_freq} Hz` : 'Stereo · L+R';
+}
+function drawChips() {
+  const html = model.filters.map((f) => `
+    <div class="chip${f.name === selected ? ' sel' : ''}${f.enabled ? '' : ' off'}" data-name="${esc(f.name)}" role="button" tabindex="0" aria-pressed="${f.name === selected}">
+      <button class="sw" type="button" role="switch" aria-checked="${f.enabled}" data-toggle="${esc(f.name)}" aria-label="${esc(f.name)} on"></button>
+      <b>${esc(f.name)}</b><small>${chipInfo(f)}</small>
+    </div>`).join('') +
+    `<button class="addchip" type="button" id="addband" aria-label="Add band"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Band</button>`;
+  const chips = $('chips');
+  if (chips.dataset.html !== html) { chips.innerHTML = html; chips.dataset.html = html; }
+}
+function selFilter() { return model && model.filters.find((f) => f.name === selected); }
+
+/* ---------- fader bank ---------- */
+const capTop = (frac) => `calc(10px + (100% - 20px) * ${frac})`;
+function faderFilters() { return [...model.filters.filter((f) => f.type === 'Gain'), ...model.filters.filter((f) => f.type !== 'Gain')]; }
+function buildStrips() {
+  $('strips').innerHTML = faderFilters().map((f) => {
+    const [lo, hi] = gainRange(f), step = f.type === 'Gain' ? 10 : 5;
+    let ticks = '';
+    if (hasGain(f)) for (let v = lo; v <= hi; v += step) ticks += `<i class="tick${v === 0 ? ' zero' : ''}" style="top:${capTop((hi - v) / (hi - lo))}"></i>`;
+    return `<div class="strip${f.type === 'Gain' ? ' pre' : ''}${f.enabled ? '' : ' off'}" data-name="${esc(f.name)}">
+      <span class="sval"></span>
+      <div class="fader${hasGain(f) ? '' : ' none'}"${hasGain(f) ? ` role="slider" tabindex="0" aria-label="${esc(f.name)} gain" aria-valuemin="${lo}" aria-valuemax="${hi}"` : ''}>${ticks}${hasGain(f) ? '<div class="fcap"></div>' : ''}</div>
+      <span class="sname">${esc(f.name)}</span><span class="sfreq"></span>
+    </div>`;
+  }).join('');
+  $('strips').querySelectorAll('.strip').forEach((el) => bindFader(el));
+}
+function buildDetail() {
+  const d = $('detail'), f = selFilter();
+  if (!f) { d.innerHTML = '<p class="empty" style="grid-column:1 / -1">No filters yet. Tap + Band to add one.</p>'; return; }
+  const p = f.parameters || {};
+  let html = '';
+  if (f.type === 'Gain') html += '<p class="hint">Preamp lowers the whole signal to leave headroom for boosts.</p>';
+  if (hasFreq(f)) html += `<div class="ctl"><label for="fslider"><span>Freq</span><span id="fval"></span></label><input type="range" id="fslider" min="0" max="1000" step="1"></div>`;
+  if (typeof p.q === 'number') html += `<div class="ctl"><label for="qslider"><span>Q</span><span id="qval"></span></label><input type="range" id="qslider" min="0" max="1000" step="1"></div>`;
+  else if (typeof p.slope === 'number') html += `<div class="ctl"><label for="sslider"><span>Slope</span><span id="sval"></span></label><input type="range" id="sslider" min="1" max="12" step="0.5"></div>`;
+  else if (hasFreq(f)) html += '<span></span>';
+  if (f.type !== 'Gain') html += `<button class="textbtn" type="button" id="remove">Remove</button>`;
+  d.innerHTML = html;
+  const on = (id, fn) => { if ($(id)) $(id).addEventListener('input', () => { const f = selFilter(); if (f) fn(f, Number($(id).value)); }); };
+  on('fslider', (f, v) => setParam(f, 'freq', Math.round(20 * Math.pow(1000, v / 1000))));
+  on('qslider', (f, v) => setParam(f, 'q', Math.round(0.3 * Math.pow(40, v / 1000) * 100) / 100));
+  on('sslider', (f, v) => setParam(f, 'slope', v));
+  if ($('remove')) $('remove').addEventListener('click', () => { if (confirm(`Remove ${selected}?`)) send({ cmd: 'remove_filter', name: selected }); });
+}
+function updateMixer() {
+  $('strips').querySelectorAll('.strip').forEach((el) => {
+    const f = model.filters.find((x) => x.name === el.dataset.name); if (!f) return;
+    const p = f.parameters || {};
+    el.classList.toggle('sel', f.name === selected);
+    el.querySelector('.sval').textContent = hasGain(f) ? fmtDb(p.gain) : '–';
+    el.querySelector('.sfreq').textContent = f.type === 'Gain' ? 'dB' : hasFreq(f) ? fmtHz(p.freq) : '';
+    const cap = el.querySelector('.fcap');
+    if (cap) {
+      const [lo, hi] = gainRange(f);
+      cap.style.top = capTop((hi - clamp(p.gain, lo, hi)) / (hi - lo));
+      const fd = el.querySelector('.fader');
+      fd.setAttribute('aria-valuenow', p.gain); fd.setAttribute('aria-valuetext', fmtDb(p.gain) + ' dB');
+    }
+  });
+  const f = selFilter(); if (!f) return;
+  const p = f.parameters || {};
+  const set = (id, v) => { if ($(id) && document.activeElement !== $(id)) $(id).value = v; };
+  if ($('fslider')) { set('fslider', Math.round(Math.log10(p.freq / 20) / 3 * 1000)); $('fval').textContent = fmtHz(p.freq); }
+  if ($('qslider')) { set('qslider', Math.round(Math.log(p.q / 0.3) / Math.log(40) * 1000)); $('qval').textContent = p.q.toFixed(2); }
+  if ($('sslider')) { set('sslider', p.slope); $('sval').textContent = p.slope.toFixed(1); }
+}
+function bindFader(strip) {
+  const name = strip.dataset.name, fd = strip.querySelector('.fader');
+  const filt = () => model.filters.find((x) => x.name === name);
+  strip.addEventListener('click', () => select(name));
+  if (!fd.querySelector('.fcap')) return;
+  const stepOf = (f) => (f.type === 'Gain' ? 0.5 : 0.1);
+  let startY = 0, startV = 0;
+  // Drag moves the cap relative to where the finger lands, like a real fader: touching never makes it jump.
+  fd.addEventListener('pointerdown', (e) => {
+    const f = filt(); if (!f) return;
+    select(name);
+    fd.setPointerCapture(e.pointerId); dragging = true; startY = e.clientY; startV = f.parameters.gain;
+  });
+  fd.addEventListener('pointermove', (e) => {
+    if (!fd.hasPointerCapture(e.pointerId)) return;
+    const f = filt(), [lo, hi] = gainRange(f), travel = Math.max(40, fd.clientHeight - 20), s = stepOf(f);
+    const v = clamp(Math.round((startV + (startY - e.clientY) * (hi - lo) / travel) / s) * s, lo, hi);
+    if (v !== f.parameters.gain) setParam(f, 'gain', Math.round(v * 10) / 10);
+  });
+  const end = (e) => { if (fd.hasPointerCapture(e.pointerId)) fd.releasePointerCapture(e.pointerId); endDrag(); };
+  fd.addEventListener('pointerup', end); fd.addEventListener('pointercancel', end);
+  fd.addEventListener('dblclick', () => setParam(filt(), 'gain', 0));
+  fd.addEventListener('keydown', (e) => {
+    const f = filt(), [lo, hi] = gainRange(f);
+    const d = { ArrowUp: 0.5, ArrowRight: 0.5, ArrowDown: -0.5, ArrowLeft: -0.5, PageUp: 3, PageDown: -3 }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    setParam(f, 'gain', clamp(Math.round((f.parameters.gain + d) * 10) / 10, lo, hi));
+  });
+}
+function endDrag() {
+  dragging = false;
+  if (pending) { const m = pending; pending = null; setModel(m); }
+}
+function setParam(f, param, value) {
+  if (!f) return;
+  f.parameters[param] = value;
+  send({ cmd: 'set_param', name: f.name, param, value });
+  drawChips(); updateMixer(); drawCurve();
+}
+
+/* ---------- curve ---------- */
+function buildGrid() {
+  const fl = [50, 100, 200, 500, 1000, 2000, 5000, 10000];
+  let g = '';
+  for (const db of [-11.25, -7.5, -3.75, 3.75, 7.5, 11.25]) g += `<line x1="0" y1="${yOf(db)}" x2="1000" y2="${yOf(db)}" vector-effect="non-scaling-stroke"/>`;
+  for (const f of fl) g += `<line x1="${xOf(f)}" y1="0" x2="${xOf(f)}" y2="260" vector-effect="non-scaling-stroke"/>`;
+  $('grid').innerHTML = g;
+  const labels = [[20, '20'], [50, '50'], [100, '100'], [200, '200'], [500, '500'], [1000, '1k'], [2000, '2k'], [5000, '5k'], [10000, '10k'], [20000, '20k']];
+  $('faxis').innerHTML = labels.map(([f, t]) => `<span style="left:${xOf(f) / 10}%${f === 20 ? ';transform:none' : f === 20000 ? ';transform:translateX(-100%)' : ''}">${t}</span>`).join('');
+}
+function buildNodes() {
+  const box = $('nodes');
+  box.innerHTML = model.filters.filter((f) => hasFreq(f) && f.type !== 'Gain').map((f) =>
+    `<button class="node${f.name === selected ? ' sel' : ''}${f.enabled ? '' : ' off'}" type="button" data-node="${esc(f.name)}" aria-label="${esc(f.name)}"></button>`).join('');
+  box.querySelectorAll('.node').forEach(bindNode);
+}
+function bindNode(el) {
+  el.addEventListener('pointerdown', (e) => {
+    const name = el.dataset.node;
+    select(name);
+    const node = $('nodes').querySelector(`[data-node="${cssEsc(name)}"]`);
+    node.setPointerCapture(e.pointerId); dragging = true;
+    node.onpointermove = (ev) => {
+      if (!node.hasPointerCapture(ev.pointerId)) return;
+      const r = $('curve').getBoundingClientRect(), f = selFilter(); if (!f) return;
+      const fx = clamp((ev.clientX - r.left) / r.width, 0, 1), fy = clamp((ev.clientY - r.top) / r.height, 0, 1);
+      const freq = Math.round(20 * Math.pow(1000, fx));
+      if (Math.round(f.parameters.freq) !== freq) setParam(f, 'freq', freq);
+      if (hasGain(f)) {
+        const g = clamp(Math.round((MID - fy * H) * DB_RANGE / MID * 10) / 10, -15, 15);
+        if (f.parameters.gain !== g) setParam(f, 'gain', g);
+      }
+    };
+    node.onpointerup = node.onpointercancel = (ev) => {
+      if (node.hasPointerCapture(ev.pointerId)) node.releasePointerCapture(ev.pointerId);
+      node.onpointermove = null; endDrag();
+    };
+  });
+}
+function drawCurve() {
+  if (!model) return;
+  const tot = totalResponse();
+  let d = '';
+  for (let i = 0; i < FREQS.length; i++) d += (i ? ' L' : 'M') + xOf(FREQS[i]).toFixed(1) + ',' + clamp(yOf(tot[i]), -20, 280).toFixed(1);
+  $('cline').setAttribute('d', d);
+  $('cfill').setAttribute('d', `M0,${MID} L${d.slice(1)} L${W},${MID} Z`);
+  const f = selFilter();
+  const mk = $('marker');
+  if (f && hasFreq(f) && f.type !== 'Gain') { mk.hidden = false; mk.style.left = xOf(f.parameters.freq) / 10 + '%'; } else mk.hidden = true;
+  $('nodes').querySelectorAll('.node').forEach((el) => {
+    const nf = model.filters.find((x) => x.name === el.dataset.node); if (!nf) return;
+    const g = hasGain(nf) ? nf.parameters.gain : responseAt(nf.parameters.freq, tot);
+    el.style.left = xOf(nf.parameters.freq) / 10 + '%';
+    el.style.top = clamp(yOf(g), 0, H) / H * 100 + '%';
+    el.setAttribute('aria-label', `${nf.name}, ${fmtHz(nf.parameters.freq)}${hasGain(nf) ? ', ' + fmtDb(nf.parameters.gain) + ' dB' : ''}`);
+  });
+  $('plottitle').textContent = f && hasFreq(f) ? `${f.name}: ${fmtHz(f.parameters.freq)}${hasGain(f) ? ' · ' + fmtDb(f.parameters.gain) + ' dB' : ''}${typeof f.parameters.q === 'number' ? ' · Q ' + f.parameters.q.toFixed(2) : ''}` : 'EQ curve';
+}
+
+/* ---------- meters and status ---------- */
+const pct = (db) => clamp((db + 60) / 60, 0, 1) * 100;
+const lvl = (v) => (v == null || v < -99 ? '−inf' : fmtDb(v));
+function drawLevels(m) {
+  const sets = [[m.capture_peak, m.capture_rms, 0], [m.playback_peak, m.playback_rms, 2]];
+  for (const [pk, rm, off] of sets) for (let ch = 0; ch < 2; ch++) {
+    const bar = $('b' + (off + ch)), p = pk && pk[ch] != null ? pk[ch] : -100, r = rm && rm[ch] != null ? rm[ch] : -100;
+    bar.children[0].style.height = pct(p) + '%';
+    bar.children[1].style.height = pct(r) + '%';
+    bar.classList.toggle('clip', p > -0.1);
+  }
+  const two = (a) => a && a.length ? `${lvl(a[0])} ${lvl(a[1] ?? a[0])}` : '–';
+  $('inpk').textContent = two(m.capture_peak); $('outpk').textContent = two(m.playback_peak);
+  $('inrms').textContent = two(m.capture_rms); $('outrms').textContent = two(m.playback_rms);
+}
+function drawStatus() {
+  const s = status, parts = [];
+  const running = s.state === 'Running';
+  $('sdot').classList.toggle('run', running);
+  if (!running) parts.push(s.state || 'Offline');
+  if (s.capture_rate) parts.push(`${Math.round(s.capture_rate / 1000)} kHz`);
+  if (s.temp != null) parts.push(`${Math.round(s.temp)} °C`);
+  if (s.load != null) parts.push(`${Math.round(s.load)}%`);
+  $('stext').textContent = parts.join('  ');
+  $('clip').textContent = `Clip ${s.clipped ?? 0}`;
+}
+
+/* ---------- appearance ---------- */
+function applySettings() {
+  const s = model.settings || {};
+  document.body.className = 'bg-' + (s.background === 'custom' && !s.background_file ? 'carbon' : s.background || 'carbon');
+  document.body.style.backgroundImage = s.background === 'custom' && s.background_file ? `url("/uploads/${encodeURIComponent(s.background_file)}")` : '';
+  document.documentElement.style.setProperty('--alpha', s.opacity ?? 0.9);
+  if (document.activeElement !== $('opacity')) $('opacity').value = Math.round((s.opacity ?? 0.9) * 100);
+  $('opval').textContent = Math.round((s.opacity ?? 0.9) * 100) + '%';
+  document.querySelectorAll('.tile').forEach((t) => t.setAttribute('aria-pressed', t.dataset.bg === s.background));
+  const ct = $('customtile').querySelector('i');
+  if (s.background_file) { ct.style.backgroundImage = `url("/uploads/${encodeURIComponent(s.background_file)}")`; ct.innerHTML = ''; $('customlabel').textContent = 'Photo'; }
+  else if (!ct.innerHTML) { ct.style.backgroundImage = ''; ct.innerHTML = PLUS; $('customlabel').textContent = 'Upload'; }
+  const logoHtml = s.logo_file
+    ? `<button class="logo-btn" type="button" id="logobtn" aria-label="Change logo"><img class="logo-img" src="/uploads/${encodeURIComponent(s.logo_file)}" alt="Logo"></button>`
+    : `<button class="logo-slot" type="button" id="logoslot" aria-label="Add your logo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16 L15 11 L6 19"/></svg>Your logo</button>`;
+  if ($('logo').dataset.html !== logoHtml) {
+    $('logo').innerHTML = logoHtml; $('logo').dataset.html = logoHtml;
+    if ($('logoslot')) $('logoslot').onclick = () => $('logofile').click();
+    if ($('logobtn')) $('logobtn').onclick = () => togglePop(true);
+  }
+}
+async function upload(kind, file) {
+  const fd = new FormData(); fd.append('file', file);
+  const r = await fetch(`/upload/${kind}`, { method: 'POST', body: fd });
+  if (!r.ok) toast(await r.text());
+}
+
+/* ---------- misc ---------- */
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function cssEsc(s) { return window.CSS && CSS.escape ? CSS.escape(s) : s.replace(/"/g, '\\"'); }
+let toastTimer;
+function toast(text) { const t = $('toast'); t.textContent = text; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 5000); }
+
+/* ---------- events ---------- */
+document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send({ cmd: 'set_mode', mode: b.dataset.mode })));
+$('preset').addEventListener('change', (e) => send({ cmd: 'preset', name: e.target.value }));
+function stepPreset(dir) {
+  if (!model || !model.presets.length) return;
+  const i = model.presets.indexOf(model.config_name), n = model.presets.length;
+  send({ cmd: 'preset', name: model.presets[((i < 0 ? 0 : i + dir) % n + n) % n] });
+}
+$('prev').addEventListener('click', () => stepPreset(-1));
+$('next').addEventListener('click', () => stepPreset(1));
+$('undo').addEventListener('click', () => send({ cmd: 'undo' }));
+$('save').addEventListener('click', () => send({ cmd: 'save' }));
+$('bypass').addEventListener('click', () => send({ cmd: 'set_bypass', value: !model.bypass }));
+$('subcut').addEventListener('click', () => send({ cmd: 'set_lowcut', value: !model.lowcut }));
+$('chips').addEventListener('click', (e) => {
+  const tg = e.target.closest('[data-toggle]');
+  if (tg) { send({ cmd: 'toggle_filter', name: tg.dataset.toggle }); return; }
+  if (e.target.closest('#addband')) { send({ cmd: 'add_band', freq: 1000 }); return; }
+  const chip = e.target.closest('.chip');
+  if (chip) select(chip.dataset.name);
+});
+$('chips').addEventListener('keydown', (e) => {
+  const chip = e.target.closest('.chip');
+  if (chip && (e.key === 'Enter' || e.key === ' ') && e.target === chip) { e.preventDefault(); select(chip.dataset.name); }
+});
+function togglePop(open) { $('pop').classList.toggle('open', open); $('gear').classList.toggle('on', open); $('gear').setAttribute('aria-expanded', open); }
+$('gear').addEventListener('click', () => togglePop(!$('pop').classList.contains('open')));
+$('popclose').addEventListener('click', () => togglePop(false));
+$('tiles').addEventListener('click', (e) => {
+  const t = e.target.closest('.tile'); if (!t) return;
+  if (t.dataset.bg === 'custom' && !(model.settings || {}).background_file) { $('bgfile').click(); return; }
+  send({ cmd: 'settings', values: { background: t.dataset.bg } });
+});
+$('opacity').addEventListener('input', (e) => {
+  const v = e.target.value / 100;
+  document.documentElement.style.setProperty('--alpha', v); $('opval').textContent = e.target.value + '%';
+});
+$('opacity').addEventListener('change', (e) => send({ cmd: 'settings', values: { opacity: e.target.value / 100 } }));
+$('logoup').addEventListener('click', () => $('logofile').click());
+$('logorm').addEventListener('click', () => send({ cmd: 'settings', values: { logo_file: null } }));
+$('bgrm').addEventListener('click', () => send({ cmd: 'settings', values: { background_file: null, background: 'carbon' } }));
+$('logofile').addEventListener('change', (e) => { if (e.target.files[0]) upload('logo', e.target.files[0]); e.target.value = ''; });
+$('bgfile').addEventListener('change', (e) => { if (e.target.files[0]) upload('background', e.target.files[0]); e.target.value = ''; });
+
+buildGrid();
+connect();
+</script>
+</body>
+</html>

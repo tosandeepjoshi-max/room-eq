@@ -1,0 +1,6 @@
+#!/bin/sh
+# Restart the Room EQ kiosk browser on the touchscreen (no sudo needed).
+pkill -x chromium
+for i in $(seq 10); do pgrep -x chromium >/dev/null || break; sleep 1; done
+export DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/$(id -u) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus
+setsid chromium --ozone-platform=wayland --kiosk --noerrdialogs --password-store=basic --force-device-scale-factor=1 http://localhost:8080 >/tmp/roomeq-kiosk.log 2>&1 </dev/null &

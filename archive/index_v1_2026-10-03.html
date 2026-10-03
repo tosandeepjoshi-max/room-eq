@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b2029">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg">
+<title>Room EQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1b2029; --panel-rgb:35,42,53; --alpha:.9; --raised:#2c3542; --line:#3a4555; --sunk:#1c232d;
+  --plot:#161b22; --text:#e8edf3; --muted:#9aa6b5; --coral:#ff7a72; --cyan:#3ccfe0;
+  --sans:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'DejaVu Sans Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body.bg-carbon{background:repeating-linear-gradient(135deg,#1b2029 0 6px,#1f2530 6px 12px)}
+body.bg-plain{background:#1b2029}
+body.bg-walnut{background:repeating-linear-gradient(90deg,#3b2617 0 7px,#4a2f1c 7px 11px,#34200f 11px 16px)}
+body.bg-custom{background:#1b2029 center/cover no-repeat fixed}
+button{font-family:inherit;color:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.panel{background:rgba(var(--panel-rgb),var(--alpha));border-radius:12px}
+.app{height:100vh;height:100dvh;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));display:grid;grid-template-rows:56px 92px minmax(0,1fr);gap:12px}
+
+/* header */
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 10px 0 14px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo-slot{width:132px;height:40px;border:2px dashed #4a5668;border-radius:8px;background:transparent;color:var(--muted);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;flex:none}
+.logo-img{height:40px;max-width:160px;object-fit:contain;display:block;flex:none}
+.title{display:flex;flex-direction:column;line-height:1}
+.title b{font-size:18px;font-weight:800}
+.title span{font-size:11px;color:var(--muted);margin-top:4px;font-weight:600}
+.seg{display:flex;gap:2px;background:var(--sunk);border-radius:999px;padding:4px}
+.seg button{font-size:14px;font-weight:600;color:var(--muted);background:transparent;border:0;border-radius:999px;height:40px;padding:0 18px;cursor:pointer}
+.seg button.on{background:var(--line);color:var(--text)}
+.preset{display:flex;align-items:center;background:var(--sunk);border-radius:999px;padding:2px 4px 2px 14px;width:260px;gap:4px}
+.preset select{flex:1;min-width:0;background:transparent;border:0;color:var(--text);font:600 14px var(--sans);height:40px;cursor:pointer;appearance:none;-webkit-appearance:none}
+.preset select option{background:var(--raised)}
+.ico{width:44px;height:44px;border:0;background:transparent;color:#c7d0db;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;padding:0;position:relative;flex:none}
+.ico:disabled{opacity:.35;cursor:default}
+.ico.on{background:var(--line);color:var(--coral)}
+.ico .dot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--coral)}
+.status{display:flex;align-items:center;gap:8px;font:13px var(--mono);color:var(--muted);margin-right:6px;white-space:nowrap}
+.status i{width:8px;height:8px;border-radius:50%;background:#6b7685;display:inline-block}
+.status i.run{background:#46d39a;box-shadow:0 0 8px #46d39a}
+.hright{display:flex;align-items:center;gap:2px}
+
+/* module cards */
+.cards{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;min-width:0}
+.card{background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;grid-template-columns:26px minmax(0,1fr);grid-template-rows:auto 1fr;column-gap:8px;row-gap:4px;align-items:center;cursor:pointer;text-align:left;min-width:0}
+.card.sel{background:#36424f;border-color:var(--coral)}
+.card.off .cname,.card.off .cval,.card.off svg.shape{opacity:.45}
+.card .pw{width:26px;height:26px;border-radius:50%;border:0;background:var(--sunk);color:var(--cyan);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.card.off .pw{color:#6b7685}
+.cname{font-size:13px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cval{font:12px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .shape{justify-self:center}
+.addcard{border:2px dashed var(--line);border-radius:10px;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:64px}
+
+/* main */
+.main{display:grid;grid-template-columns:210px minmax(0,1fr) 220px;gap:12px;min-height:0}
+.editor{padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;min-height:0}
+.ehead{align-self:stretch;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ehead b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ehead span{font-size:12px;color:var(--muted)}
+.bigknob{width:150px;height:150px;touch-action:none;cursor:ns-resize;border:0;background:transparent;padding:0;border-radius:50%}
+.klabel{font-size:14px;font-weight:600;margin-top:-6px}
+.freq{align-self:stretch;display:flex;flex-direction:column;gap:6px}
+.freq label{display:flex;justify-content:space-between;font-size:13px}
+.freq label span:first-child{color:var(--muted)}
+.freq label span:last-child{font-family:var(--mono)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;touch-action:none}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:var(--sunk);border-radius:3px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:var(--text);border:3px solid var(--coral)}
+input[type=range]::-moz-range-track{height:6px;background:var(--sunk);border-radius:3px}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--text);border:3px solid var(--coral)}
+.smallknobs{display:flex;gap:22px;justify-content:center}
+.sk{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px;font-weight:600}
+.sk button{width:58px;height:58px;border:0;background:transparent;padding:0;touch-action:none;cursor:ns-resize;border-radius:50%}
+.textbtn{border:1px solid #4a5668;background:transparent;color:var(--text);border-radius:10px;height:40px;padding:0 14px;font-size:13px;font-weight:600;cursor:pointer}
+.empty{color:var(--muted);font-size:14px;text-align:center;margin:auto 0;line-height:1.5}
+
+.plot{background:var(--plot);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
+.plothead{height:38px;background:rgba(var(--panel-rgb),1);display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--raised);font-size:13px;font-weight:600}
+.plothead span:last-child{font:12px var(--mono);color:var(--muted)}
+.plotbody{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 34px;padding:14px 6px 0 14px;min-height:0}
+.curve{position:relative;touch-action:none}
+.curve svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.marker{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#f5f7fa;pointer-events:none}
+.marker::before{content:"";position:absolute;top:-4px;left:-7px;width:16px;height:30px;border-radius:8px;background:var(--plot);border:2px solid #f5f7fa;box-sizing:border-box}
+.node{position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;border:0;background:transparent;padding:0;cursor:grab;touch-action:none}
+.node::after{content:"";position:absolute;left:7px;top:7px;width:16px;height:16px;border-radius:50%;background:var(--sunk);border:3px solid var(--text);box-sizing:border-box}
+.node.sel::after{left:4px;top:4px;width:22px;height:22px;background:var(--coral);border-color:#fff}
+.node.off{opacity:.4}
+.dbaxis{position:relative;font:11px var(--mono);color:var(--muted)}
+.dbaxis span{position:absolute;left:6px;transform:translateY(-50%)}
+.faxis{position:relative;height:30px;margin:0 40px 0 14px;font:11px var(--mono);color:var(--muted)}
+.faxis span{position:absolute;top:8px;transform:translateX(-50%)}
+
+.meters{padding:14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.readout{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;font:12px var(--mono);text-align:center;row-gap:2px}
+.readout .tag{font:700 11px var(--sans);background:var(--sunk);border-radius:6px;padding:2px 6px}
+.readout .rms{color:var(--muted)}
+.readout .cap{font:11px var(--sans);color:var(--muted)}
+.bars{flex:1;display:grid;grid-template-columns:14px 14px 1fr 14px 14px;gap:6px;padding:0 8px;min-height:0}
+.bar{position:relative;background:var(--sunk);border-radius:3px;overflow:hidden}
+.bar .pk,.bar .rm{position:absolute;left:0;right:0;bottom:0;height:0}
+.bar .pk{background:#6d7a8c}
+.bar .rm{background:#b9c3cf}
+.bar.clip .pk{background:var(--coral)}
+.scale{display:flex;flex-direction:column;justify-content:space-between;align-items:center;font:10px var(--mono);color:var(--muted)}
+.io{display:flex;justify-content:space-between;padding:0 8px;font-size:11px;color:var(--muted);font-weight:700}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:10px;overflow:hidden}
+.btnrow button{font-size:14px;font-weight:600;background:var(--line);border:0;height:44px;cursor:pointer}
+.btnrow button[aria-pressed=true]{background:var(--coral);color:#2a0f0d}
+.mfoot{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+
+/* appearance popover */
+.pop{position:fixed;top:84px;right:20px;width:316px;background:var(--raised);border:1px solid #4a5668;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.55);padding:16px;display:none;flex-direction:column;gap:12px;z-index:10}
+.pop.open{display:flex}
+.pop h2{font-size:15px;margin:0}
+.pop h3{font-size:12px;color:var(--muted);margin:2px 0 0;font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{display:flex;flex-direction:column;gap:4px;align-items:center;font-size:11px;color:var(--muted);background:transparent;border:0;padding:0;cursor:pointer}
+.tile i{display:block;width:100%;height:56px;border-radius:8px;border:2px solid var(--line);background-size:cover;background-position:center}
+.tile[aria-pressed=true] i{border-color:var(--coral)}
+.tile.up i{border-style:dashed;display:flex;align-items:center;justify-content:center;color:#c7d0db}
+.poprow{display:flex;gap:10px}
+.poprow button{flex:1;height:44px;border-radius:10px;border:0;background:var(--line);font-size:14px;font-weight:600;cursor:pointer}
+.poprow button.ghost{background:transparent;border:1px solid #4a5668}
+.hint{font-size:11px;color:var(--muted);line-height:1.4}
+.op label{display:flex;justify-content:space-between;font-size:13px}
+.op label span:first-child{color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#4a1f1c;border:1px solid var(--coral);color:var(--text);padding:10px 16px;border-radius:10px;font-size:13px;max-width:80vw;display:none;z-index:20}
+.toast.show{display:block}
+.offline{position:fixed;inset:0;background:rgba(15,18,23,.8);display:none;align-items:center;justify-content:center;font-size:16px;z-index:30;text-align:center;padding:24px;line-height:1.5}
+.offline.show{display:flex}
+
+/* phone */
+@media (max-width: 820px){
+  body{overflow:auto}
+  .app{height:auto;grid-template-rows:auto auto auto}
+  header{flex-wrap:wrap;padding:10px;row-gap:10px}
+  .seg{order:3;flex:1 1 100%;justify-content:center}
+  .seg button{flex:1}
+  .preset{order:4;flex:1 1 100%;width:auto}
+  .status{display:none}
+  .logo-slot{width:96px}
+  .cards{grid-auto-columns:140px;overflow-x:auto;padding-bottom:4px}
+  .addcard{min-width:72px}
+  .card{min-height:84px}
+  .main{grid-template-columns:1fr 1fr;grid-template-areas:"plot plot" "ed me"}
+  .plot{grid-area:plot;height:300px}
+  .editor{grid-area:ed}
+  .meters{grid-area:me;min-height:360px}
+  .pop{left:16px;right:16px;width:auto;top:70px}
+}
+@media (max-width: 480px){
+  .main{grid-template-columns:1fr;grid-template-areas:"plot" "ed" "me"}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body class="bg-carbon">
+<div class="app">
+  <header class="panel">
+    <div class="brand">
+      <span id="logo"></span>
+      <div class="title"><b>Room EQ</b><span>CamillaDSP</span></div>
+    </div>
+    <div class="seg" role="group" aria-label="Mode">
+      <button type="button" data-mode="room">Room EQ</button>
+      <button type="button" data-mode="flat">Flat</button>
+      <button type="button" data-mode="night">Night</button>
+    </div>
+    <div class="preset">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#9aa6b5" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>
+      <select id="preset" aria-label="Preset"></select>
+      <button class="ico" id="prev" type="button" aria-label="Previous preset"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M16 5 L7 12 L16 19 Z"/></svg></button>
+      <button class="ico" id="next" type="button" aria-label="Next preset"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5 L17 12 L8 19 Z"/></svg></button>
+    </div>
+    <div class="hright">
+      <span class="status"><i id="sdot"></i><span id="stext">Connecting</span></span>
+      <button class="ico" id="undo" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 7 L4 12 L9 17"/><path d="M4 12 H15 A5 5 0 0 1 15 22"/></svg></button>
+      <button class="ico" id="save" type="button" aria-label="Save to config file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M5 3 H16 L21 8 V21 H3 V3 Z"/><path d="M7 3 V9 H15 V3"/><rect x="7" y="13" width="10" height="6"/></svg><span class="dot" id="dirtydot" hidden></span></button>
+      <button class="ico" id="gear" type="button" aria-label="Appearance" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2 V5 M12 19 V22 M2 12 H5 M19 12 H22 M4.9 4.9 L7 7 M17 17 L19.1 19.1 M4.9 19.1 L7 17 M17 7 L19.1 4.9"/></svg></button>
+    </div>
+  </header>
+
+  <section class="cards" id="cards" aria-label="Filters"></section>
+
+  <div class="main">
+    <section class="panel editor" id="editor" aria-label="Selected filter"></section>
+
+    <section class="plot" aria-label="EQ curve">
+      <div class="plothead"><span id="plottitle">EQ curve</span><span id="plotinfo"></span></div>
+      <div class="plotbody">
+        <div class="curve" id="curve">
+          <svg viewBox="0 0 1000 260" preserveAspectRatio="none" aria-hidden="true">
+            <g stroke="#262e38" stroke-width="1" id="grid"></g>
+            <line x1="0" y1="130" x2="1000" y2="130" stroke="#3a4555" stroke-width="1" vector-effect="non-scaling-stroke"/>
+            <path id="cfill" fill="rgba(255,122,114,.45)"/>
+            <path id="cline" fill="none" stroke="#f5f7fa" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="marker" id="marker" hidden></div>
+          <div id="nodes"></div>
+        </div>
+        <div class="dbaxis"><span style="top:6px">dB</span><span style="top:25%">+7.5</span><span style="top:50%">0</span><span style="top:75%">−7.5</span><span style="top:calc(100% - 6px)">−15</span></div>
+      </div>
+      <div class="faxis" id="faxis"></div>
+    </section>
+
+    <section class="panel meters" aria-label="Levels">
+      <div class="readout">
+        <span id="inpk">–</span><span class="tag">I/O</span><span id="outpk">–</span>
+        <span class="rms" id="inrms">–</span><span class="cap">Peak / RMS</span><span class="rms" id="outrms">–</span>
+      </div>
+      <div class="bars">
+        <div class="bar" id="b0"><div class="pk"></div><div class="rm"></div></div>
+        <div class="bar" id="b1"><div class="pk"></div><div class="rm"></div></div>
+        <div class="scale"><span>0</span><span>−10</span><span>−20</span><span>−30</span><span>−40</span><span>−50</span><span>−60</span></div>
+        <div class="bar" id="b2"><div class="pk"></div><div class="rm"></div></div>
+        <div class="bar" id="b3"><div class="pk"></div><div class="rm"></div></div>
+      </div>
+      <div class="io"><span>IN</span><span>OUT</span></div>
+      <div class="btnrow">
+        <button type="button" id="bypass" aria-pressed="false">Bypass</button>
+        <button type="button" id="subcut" aria-pressed="false">Sub off</button>
+      </div>
+      <div class="mfoot"><span id="lcinfo">Sub off cuts below 80 Hz</span><span id="clip">Clip 0</span></div>
+    </section>
+  </div>
+</div>
+
+<section class="pop" id="pop" aria-label="Appearance">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h2>Appearance</h2>
+    <button class="ico" id="popclose" type="button" aria-label="Close" style="width:36px;height:36px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+  </div>
+  <h3>Background</h3>
+  <div class="tiles" id="tiles">
+    <button class="tile" type="button" data-bg="carbon"><i style="background:repeating-linear-gradient(135deg,#1b2029 0 6px,#1f2530 6px 12px)"></i>Carbon</button>
+    <button class="tile" type="button" data-bg="plain"><i style="background:#1b2029"></i>Plain</button>
+    <button class="tile" type="button" data-bg="walnut"><i style="background:repeating-linear-gradient(90deg,#3b2617 0 7px,#4a2f1c 7px 11px,#34200f 11px 16px)"></i>Walnut</button>
+    <button class="tile up" type="button" data-bg="custom" id="customtile"><i><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></i><span id="customlabel">Upload</span></button>
+  </div>
+  <div class="op">
+    <label for="opacity"><span>Panel opacity</span><span id="opval">90%</span></label>
+    <input type="range" id="opacity" min="40" max="100" step="1" value="90">
+  </div>
+  <h3>Logo</h3>
+  <div class="poprow">
+    <button type="button" id="logoup">Upload logo</button>
+    <button type="button" class="ghost" id="logorm">Remove</button>
+  </div>
+  <p class="hint" style="margin:0">PNG or SVG with transparency works best, about 264 × 80 px. Background photos look best at 1280 × 720 or larger.</p>
+  <button type="button" class="ghost" id="bgrm" style="height:40px;border-radius:10px;border:1px solid #4a5668;background:transparent;font-size:13px;font-weight:600;cursor:pointer">Remove uploaded background</button>
+  <input type="file" id="logofile" accept="image/*" hidden>
+  <input type="file" id="bgfile" accept="image/*" hidden>
+</section>
+
+<div class="toast" id="toast" role="alert"></div>
+<div class="offline" id="offline">Can't reach the Pi. Reconnecting…</div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const MINUS = '\u2212';
+const DB_RANGE = 15;
+const W = 1000, H = 260, MID = 130;
+const FREQS = Array.from({length: 240}, (_, i) => 20 * Math.pow(1000, i / 239));
+
+let model = null, pending = null, status = {}, selected = null, dragging = false;
+let ws = null, structureKey = '';
+
+/* ---------- connection ---------- */
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => $('offline').classList.remove('show');
+  ws.onclose = () => { $('offline').classList.add('show'); setTimeout(connect, 1500); };
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'state') { if (dragging) pending = msg; else setModel(msg); }
+    else if (msg.type === 'levels') drawLevels(msg);
+    else if (msg.type === 'status') { status = msg; drawStatus(); }
+    else if (msg.type === 'selected') { selected = msg.name; structureKey = ''; if (model) render(); }
+  };
+}
+function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+
+/* ---------- formatting ---------- */
+const fmtDb = (v, d = 1) => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v).toFixed(d);
+const fmtHz = (f) => f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 0 : 1).replace(/\.0$/, '') + ' kHz' : Math.round(f) + ' Hz';
+const xOf = (f) => Math.log10(f / 20) / 3 * W;
+const yOf = (db) => MID - db * MID / DB_RANGE;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/* ---------- filter helpers ---------- */
+function kindOf(f) { return (f.type === 'Biquad' || f.type === 'BiquadCombo') ? f.parameters.type : f.type; }
+const KIND_LABEL = { Peaking: 'Peak', Lowshelf: 'Low shelf', Highshelf: 'High shelf', LowshelfFO: 'Low shelf', HighshelfFO: 'High shelf',
+  Highpass: 'High-pass', Lowpass: 'Low-pass', HighpassFO: 'High-pass', LowpassFO: 'Low-pass', Notch: 'Notch', Bandpass: 'Band-pass',
+  Gain: 'Gain', FivePointPeq: '5-band PEQ', ButterworthHighpass: 'High-pass', ButterworthLowpass: 'Low-pass',
+  LinkwitzRileyHighpass: 'High-pass', LinkwitzRileyLowpass: 'Low-pass', Volume: 'Volume', Delay: 'Delay', Conv: 'Convolution' };
+const hasGain = (f) => f.parameters && typeof f.parameters.gain === 'number';
+const hasFreq = (f) => f.parameters && typeof f.parameters.freq === 'number';
+function preampFilter() { return model ? model.filters.find((f) => f.type === 'Gain') : null; }
+function gainRange(f) { return f.type === 'Gain' ? [-30, 10] : [-15, 15]; }
+
+/* ---------- response math (RBJ cookbook, as CamillaDSP uses) ---------- */
+function coefs(kind, p, fs) {
+  const w = 2 * Math.PI * p.freq / fs, cw = Math.cos(w), sw = Math.sin(w);
+  const A = Math.pow(10, (p.gain || 0) / 40);
+  let alpha;
+  switch (kind) {
+    case 'Peaking':
+      alpha = p.q ? sw / (2 * p.q) : sw * Math.sinh(Math.LN2 / 2 * (p.bandwidth || 1) * w / sw);
+      return [1 + alpha * A, -2 * cw, 1 - alpha * A, 1 + alpha / A, -2 * cw, 1 - alpha / A];
+    case 'Lowshelf': case 'Highshelf': {
+      if (p.q) alpha = sw / (2 * p.q);
+      else { const S = (p.slope || 6) / 12; alpha = sw / 2 * Math.sqrt((A + 1 / A) * (1 / S - 1) + 2); }
+      const sa = 2 * Math.sqrt(A) * alpha;
+      return kind === 'Lowshelf'
+        ? [A * ((A + 1) - (A - 1) * cw + sa), 2 * A * ((A - 1) - (A + 1) * cw), A * ((A + 1) - (A - 1) * cw - sa), (A + 1) + (A - 1) * cw + sa, -2 * ((A - 1) + (A + 1) * cw), (A + 1) + (A - 1) * cw - sa]
+        : [A * ((A + 1) + (A - 1) * cw + sa), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - sa), (A + 1) - (A - 1) * cw + sa, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - sa];
+    }
+    case 'Highpass': alpha = sw / (2 * (p.q || 0.707)); return [(1 + cw) / 2, -(1 + cw), (1 + cw) / 2, 1 + alpha, -2 * cw, 1 - alpha];
+    case 'Lowpass': alpha = sw / (2 * (p.q || 0.707)); return [(1 - cw) / 2, 1 - cw, (1 - cw) / 2, 1 + alpha, -2 * cw, 1 - alpha];
+    case 'Notch': alpha = sw / (2 * (p.q || 1)); return [1, -2 * cw, 1, 1 + alpha, -2 * cw, 1 - alpha];
+    case 'Bandpass': alpha = sw / (2 * (p.q || 1)); return [alpha, 0, -alpha, 1 + alpha, -2 * cw, 1 - alpha];
+  }
+  return null;
+}
+function biquadDb(c, f, fs) {
+  const w = 2 * Math.PI * f / fs, c1 = Math.cos(w), s1 = Math.sin(w), c2 = Math.cos(2 * w), s2 = Math.sin(2 * w);
+  const nr = c[0] + c[1] * c1 + c[2] * c2, ni = -(c[1] * s1 + c[2] * s2);
+  const dr = c[3] + c[4] * c1 + c[5] * c2, di = -(c[4] * s1 + c[5] * s2);
+  return 10 * Math.log10((nr * nr + ni * ni) / (dr * dr + di * di));
+}
+function filterDb(f, fs) {
+  const p = f.parameters || {}, kind = kindOf(f);
+  const out = new Float64Array(FREQS.length);
+  if (!p) return out;
+  const c = hasFreq(f) ? coefs(kind, p, fs) : null;
+  for (let i = 0; i < FREQS.length; i++) {
+    const fr = FREQS[i];
+    if (fr >= fs / 2) { out[i] = out[i - 1] || 0; continue; }
+    if (c) { out[i] = biquadDb(c, fr, fs); continue; }
+    const x = p.freq ? fr / p.freq : 1, G = Math.pow(10, (p.gain || 0) / 20);
+    switch (kind) {
+      case 'LowshelfFO': out[i] = 10 * Math.log10((x * x + G) / (x * x + 1 / G)); break;
+      case 'HighshelfFO': out[i] = 10 * Math.log10((G * G * x * x + G) / (x * x + G)); break;
+      case 'HighpassFO': out[i] = 10 * Math.log10(x * x / (1 + x * x)); break;
+      case 'LowpassFO': out[i] = 10 * Math.log10(1 / (1 + x * x)); break;
+      case 'ButterworthHighpass': out[i] = -10 * Math.log10(1 + Math.pow(1 / x, 2 * (p.order || 2))); break;
+      case 'ButterworthLowpass': out[i] = -10 * Math.log10(1 + Math.pow(x, 2 * (p.order || 2))); break;
+      case 'LinkwitzRileyHighpass': out[i] = -20 * Math.log10(1 + Math.pow(1 / x, p.order || 4)); break;
+      case 'LinkwitzRileyLowpass': out[i] = -20 * Math.log10(1 + Math.pow(x, p.order || 4)); break;
+      case 'FivePointPeq': {
+        const parts = [['Lowshelf', { freq: p.fls, gain: p.gls, q: p.qls }], ['Peaking', { freq: p.fp1, gain: p.gp1, q: p.qp1 }],
+          ['Peaking', { freq: p.fp2, gain: p.gp2, q: p.qp2 }], ['Peaking', { freq: p.fp3, gain: p.gp3, q: p.qp3 }],
+          ['Highshelf', { freq: p.fhs, gain: p.ghs, q: p.qhs }]];
+        let s = 0;
+        for (const [k, pp] of parts) if (pp.freq) s += biquadDb(coefs(k, pp, fs), fr, fs);
+        out[i] = s; break;
+      }
+      default: out[i] = 0;
+    }
+  }
+  return out;
+}
+function totalResponse() {
+  const fs = model.samplerate || 48000, tot = new Float64Array(FREQS.length);
+  if (model.bypass) return tot;
+  for (const f of model.filters) {
+    if (!f.enabled || f.type === 'Gain') continue;
+    const r = filterDb(f, fs);
+    for (let i = 0; i < tot.length; i++) tot[i] += r[i];
+  }
+  if (model.lowcut) {
+    const r = filterDb({ type: 'BiquadCombo', parameters: { type: 'ButterworthHighpass', freq: model.lowcut_freq, order: 4 } }, fs);
+    for (let i = 0; i < tot.length; i++) tot[i] += r[i];
+  }
+  return tot;
+}
+function responseAt(freq, tot) {
+  const t = Math.log10(freq / 20) / 3 * (FREQS.length - 1), i = clamp(Math.floor(t), 0, FREQS.length - 2);
+  return tot[i] + (tot[i + 1] - tot[i]) * (t - i);
+}
+
+/* ---------- icons ---------- */
+const PLUS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const PW = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7.5 6.5a7 7 0 1 0 9 0"/><line x1="12" y1="3" x2="12" y2="11"/></svg>';
+function shapeIcon(f) {
+  const k = kindOf(f), g = f.parameters ? f.parameters.gain || 0 : 0;
+  let d = 'M2 10 L38 10';
+  if (k === 'Peaking') d = g >= 0 ? 'M2 14 C14 14 16 4 20 4 C24 4 26 14 38 14' : 'M2 6 C14 6 16 16 20 16 C24 16 26 6 38 6';
+  else if (/^Lowshelf/.test(k)) d = g >= 0 ? 'M2 5 L12 5 C18 5 20 15 26 15 L38 15' : 'M2 15 L12 15 C18 15 20 5 26 5 L38 5';
+  else if (/^Highshelf/.test(k)) d = g >= 0 ? 'M2 15 L14 15 C20 15 22 5 28 5 L38 5' : 'M2 5 L14 5 C20 5 22 15 28 15 L38 15';
+  else if (/Highpass/.test(k)) d = 'M4 18 C10 18 12 6 18 5 L38 5';
+  else if (/Lowpass/.test(k)) d = 'M2 5 L22 5 C28 6 30 18 36 18';
+  else if (k === 'Gain') d = 'M4 16 L36 16 L36 4 Z';
+  else if (k === 'Notch') d = 'M2 6 L16 6 L20 18 L24 6 L38 6';
+  return `<svg class="shape" viewBox="0 0 40 20" width="40" height="20" fill="none" stroke="#c7d0db" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="${d}"/></svg>`;
+}
+function cardValue(f) {
+  const p = f.parameters || {}, parts = [];
+  if (hasGain(f)) parts.push(fmtDb(p.gain) + (f.type === 'Gain' ? ' dB' : ''));
+  if (hasFreq(f)) parts.push(fmtHz(p.freq));
+  return parts.join(' · ') || KIND_LABEL[kindOf(f)] || f.type;
+}
+
+/* ---------- rendering ---------- */
+function setModel(m) {
+  model = m;
+  if (!model.filters.some((f) => f.name === selected)) {
+    const first = model.filters.find((f) => f.type !== 'Gain') || model.filters[0];
+    selected = first ? first.name : null;
+  }
+  if (m.error) toast(m.error);
+  render();
+}
+function render() {
+  if (!model) return;
+  const key = model.filters.map((f) => `${f.name}|${f.enabled}|${kindOf(f)}`).join(';') + '#' + selected;
+  const structural = key !== structureKey;
+  structureKey = key;
+  drawHeader(); drawCards();
+  if (structural) { buildEditor(); buildNodes(); }
+  updateEditor(); drawCurve(); applySettings();
+}
+function drawHeader() {
+  const mode = model.bypass ? 'flat' : model.lowcut ? 'night' : 'room';
+  document.querySelectorAll('.seg button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+  const sel = $('preset');
+  const opts = model.presets.map((p) => `<option value="${esc(p)}">${esc(p.replace(/\.ya?ml$/, ''))}</option>`).join('');
+  if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
+  sel.value = model.config_name || '';
+  $('undo').disabled = !model.can_undo;
+  $('dirtydot').hidden = !model.dirty;
+  $('save').setAttribute('aria-label', model.dirty ? 'Save changes to config file (unsaved changes)' : 'Save to config file');
+  $('bypass').setAttribute('aria-pressed', model.bypass);
+  $('subcut').setAttribute('aria-pressed', model.lowcut);
+  $('lcinfo').textContent = `Sub off cuts below ${model.lowcut_freq} Hz`;
+  $('plotinfo').textContent = model.bypass ? 'Bypassed' : model.lowcut ? `Low cut ${model.lowcut_freq} Hz` : 'Stereo · L+R';
+}
+function drawCards() {
+  const html = model.filters.map((f) => `
+    <div class="card${f.name === selected ? ' sel' : ''}${f.enabled ? '' : ' off'}" data-name="${esc(f.name)}" role="button" tabindex="0" aria-pressed="${f.name === selected}">
+      <button class="pw" type="button" data-toggle="${esc(f.name)}" aria-label="${f.enabled ? 'Switch off' : 'Switch on'} ${esc(f.name)}">${PW}</button>
+      <span class="cname">${esc(f.name)}</span>
+      <span class="cval">${cardValue(f)}</span>
+      ${shapeIcon(f)}
+    </div>`).join('') +
+    `<button class="addcard" type="button" id="addband" aria-label="Add band"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`;
+  const cards = $('cards');
+  if (cards.dataset.html !== html) { cards.innerHTML = html; cards.dataset.html = html; }
+}
+function selFilter() { return model && model.filters.find((f) => f.name === selected); }
+
+function knobSvg(id, size) {
+  if (size === 'big') return `<svg viewBox="0 0 160 160" width="150" height="150" aria-hidden="true">
+    <defs><clipPath id="${id}-clip"><rect id="${id}-lvl" x="0" y="80" width="160" height="80"/></clipPath></defs>
+    <circle cx="80" cy="80" r="70" fill="none" stroke="#3a4555" stroke-width="6"/>
+    <circle cx="80" cy="80" r="62" fill="#1c232d"/>
+    <circle cx="80" cy="80" r="62" fill="#8a3f3c" clip-path="url(#${id}-clip)"/>
+    <line id="${id}-line" x1="18" y1="80" x2="142" y2="80" stroke="#ff7a72" stroke-width="2"/>
+    <text id="${id}-text" x="80" y="88" text-anchor="middle" font-size="26" font-weight="700" fill="#e8edf3" font-family="Manrope, sans-serif"></text></svg>`;
+  return `<svg viewBox="0 0 60 60" width="58" height="58" aria-hidden="true">
+    <circle cx="30" cy="30" r="24" fill="#1c232d"/>
+    <circle cx="30" cy="30" r="24" fill="none" stroke="#3a4555" stroke-width="3" stroke-dasharray="113.1 150.8" transform="rotate(135 30 30)"/>
+    <circle id="${id}-arc" cx="30" cy="30" r="24" fill="none" stroke="#ff7a72" stroke-width="3" stroke-linecap="round" stroke-dasharray="0 150.8" transform="rotate(135 30 30)"/>
+    <text id="${id}-text" x="30" y="35" text-anchor="middle" font-size="13" font-weight="700" fill="#e8edf3" font-family="Manrope, sans-serif"></text></svg>`;
+}
+function buildEditor() {
+  const ed = $('editor'), f = selFilter();
+  if (!f) { ed.innerHTML = '<p class="empty">No filters yet.<br>Tap + to add a band.</p>'; return; }
+  const p = f.parameters || {}, pre = preampFilter();
+  let html = `<div class="ehead"><b>${esc(f.name)}</b><span>${KIND_LABEL[kindOf(f)] || f.type}</span></div>`;
+  if (hasGain(f)) html += `<button class="bigknob" id="kg" type="button" aria-label="Gain">${knobSvg('kg', 'big')}</button><span class="klabel">Gain dB</span>`;
+  if (hasFreq(f)) html += `<div class="freq"><input type="range" id="fslider" min="0" max="1000" step="1" aria-label="Frequency"><label for="fslider"><span>Frequency</span><span id="fval"></span></label></div>`;
+  const small = [];
+  if (typeof p.q === 'number') small.push(`<div class="sk"><button type="button" id="kq" aria-label="Q">${knobSvg('kq')}</button>Q</div>`);
+  else if (typeof p.slope === 'number') small.push(`<div class="sk"><button type="button" id="ks" aria-label="Slope">${knobSvg('ks')}</button>Slope</div>`);
+  if (pre && pre.name !== f.name) small.push(`<div class="sk"><button type="button" id="kp" aria-label="Preamp">${knobSvg('kp')}</button>Preamp</div>`);
+  if (small.length) html += `<div class="smallknobs">${small.join('')}</div>`;
+  if (f.type !== 'Gain') html += `<button class="textbtn" type="button" id="remove" style="margin-top:auto">Remove band</button>`;
+  ed.innerHTML = html;
+  bindKnob('kg', () => selFilter(), 'gain', (f) => gainRange(f), 0.1, 0);
+  bindKnob('kq', () => selFilter(), 'q', () => [0.3, 12], 0.01, null, true);
+  bindKnob('ks', () => selFilter(), 'slope', () => [1, 12], 0.5, 6);
+  bindKnob('kp', () => preampFilter(), 'gain', () => [-30, 10], 0.5, 0);
+  const fs = $('fslider');
+  if (fs) fs.addEventListener('input', () => {
+    const f = selFilter(); if (!f) return;
+    const freq = Math.round(20 * Math.pow(1000, fs.value / 1000));
+    setParam(f, 'freq', freq, false);
+  });
+  const rm = $('remove');
+  if (rm) rm.addEventListener('click', () => { if (confirm(`Remove ${selected}?`)) send({ cmd: 'remove_filter', name: selected }); });
+}
+function updateEditor() {
+  const f = selFilter(); if (!f) return;
+  const p = f.parameters || {};
+  if ($('kg')) {
+    const [lo, hi] = gainRange(f), lvl = (p.gain - lo) / (hi - lo), y = 18 + (1 - lvl) * 124;
+    $('kg-lvl').setAttribute('y', y); $('kg-lvl').setAttribute('height', 160 - y);
+    $('kg-line').setAttribute('y1', y); $('kg-line').setAttribute('y2', y);
+    $('kg-text').textContent = fmtDb(p.gain);
+    $('kg').setAttribute('aria-valuetext', fmtDb(p.gain) + ' dB');
+  }
+  if ($('fslider')) {
+    if (document.activeElement !== $('fslider')) $('fslider').value = Math.round(Math.log10(p.freq / 20) / 3 * 1000);
+    $('fval').textContent = fmtHz(p.freq);
+  }
+  const small = (id, val, lo, hi, txt) => {
+    if (!$(id)) return;
+    $(id + '-arc').setAttribute('stroke-dasharray', `${clamp((val - lo) / (hi - lo), 0, 1) * 113.1} 150.8`);
+    $(id + '-text').textContent = txt;
+  };
+  if (typeof p.q === 'number') small('kq', Math.log(p.q / 0.3), 0, Math.log(40), p.q.toFixed(p.q < 10 ? 2 : 1));
+  if (typeof p.slope === 'number') small('ks', p.slope, 1, 12, p.slope.toFixed(1));
+  const pre = preampFilter();
+  if (pre) small('kp', pre.parameters.gain, -30, 10, fmtDb(pre.parameters.gain, pre.parameters.gain % 1 ? 1 : 0));
+}
+function bindKnob(id, getFilter, param, rangeFn, step, resetTo, logScale) {
+  const el = $(id); if (!el) return;
+  let startY = 0, startV = 0;
+  el.addEventListener('pointerdown', (e) => {
+    const f = getFilter(); if (!f) return;
+    el.setPointerCapture(e.pointerId); dragging = true; startY = e.clientY; startV = f.parameters[param];
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!el.hasPointerCapture(e.pointerId)) return;
+    const f = getFilter(), [lo, hi] = rangeFn(f), dy = startY - e.clientY;
+    let v = logScale ? startV * Math.pow(2, dy / 60) : startV + dy * (hi - lo) / 220;
+    v = clamp(Math.round(v / step) * step, lo, hi);
+    setParam(f, param, v, true);
+  });
+  const end = (e) => { if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId); endDrag(); };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  el.addEventListener('dblclick', () => { if (resetTo !== null) setParam(getFilter(), param, resetTo, false); });
+  el.addEventListener('keydown', (e) => {
+    const f = getFilter(); if (!f) return;
+    const [lo, hi] = rangeFn(f), dir = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    const v = logScale ? f.parameters[param] * Math.pow(2, dir / 12) : f.parameters[param] + dir * step * 5;
+    setParam(f, param, clamp(Math.round(v / step) * step, lo, hi), false);
+  });
+}
+function endDrag() {
+  dragging = false;
+  if (pending) { const m = pending; pending = null; setModel(m); }
+}
+function setParam(f, param, value, live) {
+  if (!f) return;
+  f.parameters[param] = value;
+  send({ cmd: 'set_param', name: f.name, param, value });
+  drawCards(); updateEditor(); drawCurve();
+}
+
+/* ---------- curve ---------- */
+function buildGrid() {
+  const fl = [50, 100, 200, 500, 1000, 2000, 5000, 10000];
+  let g = '';
+  for (const db of [-11.25, -7.5, -3.75, 3.75, 7.5, 11.25]) g += `<line x1="0" y1="${yOf(db)}" x2="1000" y2="${yOf(db)}" vector-effect="non-scaling-stroke"/>`;
+  for (const f of fl) g += `<line x1="${xOf(f)}" y1="0" x2="${xOf(f)}" y2="260" vector-effect="non-scaling-stroke"/>`;
+  $('grid').innerHTML = g;
+  const labels = [[20, '20'], [50, '50'], [100, '100'], [200, '200'], [500, '500'], [1000, '1k'], [2000, '2k'], [5000, '5k'], [10000, '10k'], [20000, '20k']];
+  $('faxis').innerHTML = labels.map(([f, t]) => `<span style="left:${xOf(f) / 10}%${f === 20 ? ';transform:none' : f === 20000 ? ';transform:translateX(-100%)' : ''}">${t}</span>`).join('');
+}
+function buildNodes() {
+  const box = $('nodes');
+  box.innerHTML = model.filters.filter((f) => hasFreq(f) && f.type !== 'Gain').map((f) =>
+    `<button class="node${f.name === selected ? ' sel' : ''}${f.enabled ? '' : ' off'}" type="button" data-node="${esc(f.name)}" aria-label="${esc(f.name)}"></button>`).join('');
+  box.querySelectorAll('.node').forEach(bindNode);
+}
+function bindNode(el) {
+  el.addEventListener('pointerdown', (e) => {
+    const name = el.dataset.node;
+    if (selected !== name) { selected = name; structureKey = ''; render(); }
+    const node = $('nodes').querySelector(`[data-node="${cssEsc(name)}"]`);
+    node.setPointerCapture(e.pointerId); dragging = true;
+    node.onpointermove = (ev) => {
+      if (!node.hasPointerCapture(ev.pointerId)) return;
+      const r = $('curve').getBoundingClientRect(), f = selFilter(); if (!f) return;
+      const fx = clamp((ev.clientX - r.left) / r.width, 0, 1), fy = clamp((ev.clientY - r.top) / r.height, 0, 1);
+      const freq = Math.round(20 * Math.pow(1000, fx));
+      if (Math.round(f.parameters.freq) !== freq) setParam(f, 'freq', freq, true);
+      if (hasGain(f)) {
+        const g = clamp(Math.round((MID - fy * H) * DB_RANGE / MID * 10) / 10, -15, 15);
+        if (f.parameters.gain !== g) setParam(f, 'gain', g, true);
+      }
+    };
+    node.onpointerup = node.onpointercancel = (ev) => {
+      if (node.hasPointerCapture(ev.pointerId)) node.releasePointerCapture(ev.pointerId);
+      node.onpointermove = null; endDrag();
+    };
+  });
+}
+function drawCurve() {
+  if (!model) return;
+  const tot = totalResponse();
+  let d = '';
+  for (let i = 0; i < FREQS.length; i++) d += (i ? ' L' : 'M') + xOf(FREQS[i]).toFixed(1) + ',' + clamp(yOf(tot[i]), -20, 280).toFixed(1);
+  $('cline').setAttribute('d', d);
+  $('cfill').setAttribute('d', `M0,${MID} L${d.slice(1)} L${W},${MID} Z`);
+  const f = selFilter();
+  const mk = $('marker');
+  if (f && hasFreq(f) && f.type !== 'Gain') { mk.hidden = false; mk.style.left = xOf(f.parameters.freq) / 10 + '%'; } else mk.hidden = true;
+  $('nodes').querySelectorAll('.node').forEach((el) => {
+    const nf = model.filters.find((x) => x.name === el.dataset.node); if (!nf) return;
+    const g = hasGain(nf) ? nf.parameters.gain : responseAt(nf.parameters.freq, tot);
+    el.style.left = xOf(nf.parameters.freq) / 10 + '%';
+    el.style.top = clamp(yOf(g), 0, H) / H * 100 + '%';
+    el.setAttribute('aria-label', `${nf.name}, ${fmtHz(nf.parameters.freq)}${hasGain(nf) ? ', ' + fmtDb(nf.parameters.gain) + ' dB' : ''}`);
+  });
+  $('plottitle').textContent = f && hasFreq(f) ? `${f.name}: ${fmtHz(f.parameters.freq)}${hasGain(f) ? ' · ' + fmtDb(f.parameters.gain) + ' dB' : ''}${typeof f.parameters.q === 'number' ? ' · Q ' + f.parameters.q.toFixed(2) : ''}` : 'EQ curve';
+}
+
+/* ---------- meters and status ---------- */
+const pct = (db) => clamp((db + 60) / 60, 0, 1) * 100;
+const lvl = (v) => (v == null || v < -99 ? '−inf' : fmtDb(v));
+function drawLevels(m) {
+  const sets = [[m.capture_peak, m.capture_rms, 0], [m.playback_peak, m.playback_rms, 2]];
+  for (const [pk, rm, off] of sets) for (let ch = 0; ch < 2; ch++) {
+    const bar = $('b' + (off + ch)), p = pk && pk[ch] != null ? pk[ch] : -100, r = rm && rm[ch] != null ? rm[ch] : -100;
+    bar.children[0].style.height = pct(p) + '%';
+    bar.children[1].style.height = pct(r) + '%';
+    bar.classList.toggle('clip', p > -0.1);
+  }
+  const two = (a) => a && a.length ? `${lvl(a[0])} ${lvl(a[1] ?? a[0])}` : '–';
+  $('inpk').textContent = two(m.capture_peak); $('outpk').textContent = two(m.playback_peak);
+  $('inrms').textContent = two(m.capture_rms); $('outrms').textContent = two(m.playback_rms);
+}
+function drawStatus() {
+  const s = status, parts = [];
+  const running = s.state === 'Running';
+  $('sdot').classList.toggle('run', running);
+  if (!running) parts.push(s.state || 'Offline');
+  if (s.capture_rate) parts.push(`${Math.round(s.capture_rate / 1000)} kHz`);
+  if (s.temp != null) parts.push(`${Math.round(s.temp)} °C`);
+  if (s.load != null) parts.push(`${Math.round(s.load)}%`);
+  $('stext').textContent = parts.join('  ');
+  $('clip').textContent = `Clip ${s.clipped ?? 0}`;
+}
+
+/* ---------- appearance ---------- */
+function applySettings() {
+  const s = model.settings || {};
+  document.body.className = 'bg-' + (s.background === 'custom' && !s.background_file ? 'carbon' : s.background || 'carbon');
+  document.body.style.backgroundImage = s.background === 'custom' && s.background_file ? `url("/uploads/${encodeURIComponent(s.background_file)}")` : '';
+  document.documentElement.style.setProperty('--alpha', s.opacity ?? 0.9);
+  if (document.activeElement !== $('opacity')) $('opacity').value = Math.round((s.opacity ?? 0.9) * 100);
+  $('opval').textContent = Math.round((s.opacity ?? 0.9) * 100) + '%';
+  document.querySelectorAll('.tile').forEach((t) => t.setAttribute('aria-pressed', t.dataset.bg === s.background));
+  const ct = $('customtile').querySelector('i');
+  if (s.background_file) { ct.style.backgroundImage = `url("/uploads/${encodeURIComponent(s.background_file)}")`; ct.innerHTML = ''; $('customlabel').textContent = 'Photo'; }
+  else if (!ct.innerHTML) { ct.style.backgroundImage = ''; ct.innerHTML = PLUS; $('customlabel').textContent = 'Upload'; }
+  const logoHtml = s.logo_file
+    ? `<img class="logo-img" src="/uploads/${encodeURIComponent(s.logo_file)}" alt="Logo">`
+    : `<button class="logo-slot" type="button" id="logoslot" aria-label="Add your logo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16 L15 11 L6 19"/></svg>Your logo</button>`;
+  if ($('logo').dataset.html !== logoHtml) {
+    $('logo').innerHTML = logoHtml; $('logo').dataset.html = logoHtml;
+    if ($('logoslot')) $('logoslot').onclick = () => $('logofile').click();
+  }
+}
+async function upload(kind, file) {
+  const fd = new FormData(); fd.append('file', file);
+  const r = await fetch(`/upload/${kind}`, { method: 'POST', body: fd });
+  if (!r.ok) toast(await r.text());
+}
+
+/* ---------- misc ---------- */
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function cssEsc(s) { return window.CSS && CSS.escape ? CSS.escape(s) : s.replace(/"/g, '\\"'); }
+let toastTimer;
+function toast(text) { const t = $('toast'); t.textContent = text; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 5000); }
+
+/* ---------- events ---------- */
+document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send({ cmd: 'set_mode', mode: b.dataset.mode })));
+$('preset').addEventListener('change', (e) => send({ cmd: 'preset', name: e.target.value }));
+function stepPreset(dir) {
+  if (!model || !model.presets.length) return;
+  const i = model.presets.indexOf(model.config_name), n = model.presets.length;
+  send({ cmd: 'preset', name: model.presets[((i < 0 ? 0 : i + dir) % n + n) % n] });
+}
+$('prev').addEventListener('click', () => stepPreset(-1));
+$('next').addEventListener('click', () => stepPreset(1));
+$('undo').addEventListener('click', () => send({ cmd: 'undo' }));
+$('save').addEventListener('click', () => send({ cmd: 'save' }));
+$('bypass').addEventListener('click', () => send({ cmd: 'set_bypass', value: !model.bypass }));
+$('subcut').addEventListener('click', () => send({ cmd: 'set_lowcut', value: !model.lowcut }));
+$('cards').addEventListener('click', (e) => {
+  const tg = e.target.closest('[data-toggle]');
+  if (tg) { send({ cmd: 'toggle_filter', name: tg.dataset.toggle }); return; }
+  if (e.target.closest('#addband')) { send({ cmd: 'add_band', freq: 1000 }); return; }
+  const card = e.target.closest('.card');
+  if (card) { selected = card.dataset.name; render(); }
+});
+$('cards').addEventListener('keydown', (e) => {
+  const card = e.target.closest('.card');
+  if (card && (e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); selected = card.dataset.name; render(); }
+});
+function togglePop(open) { $('pop').classList.toggle('open', open); $('gear').classList.toggle('on', open); $('gear').setAttribute('aria-expanded', open); }
+$('gear').addEventListener('click', () => togglePop(!$('pop').classList.contains('open')));
+$('popclose').addEventListener('click', () => togglePop(false));
+$('tiles').addEventListener('click', (e) => {
+  const t = e.target.closest('.tile'); if (!t) return;
+  if (t.dataset.bg === 'custom' && !(model.settings || {}).background_file) { $('bgfile').click(); return; }
+  send({ cmd: 'settings', values: { background: t.dataset.bg } });
+});
+$('opacity').addEventListener('input', (e) => {
+  const v = e.target.value / 100;
+  document.documentElement.style.setProperty('--alpha', v); $('opval').textContent = e.target.value + '%';
+});
+$('opacity').addEventListener('change', (e) => send({ cmd: 'settings', values: { opacity: e.target.value / 100 } }));
+$('logoup').addEventListener('click', () => $('logofile').click());
+$('logorm').addEventListener('click', () => send({ cmd: 'settings', values: { logo_file: null } }));
+$('bgrm').addEventListener('click', () => send({ cmd: 'settings', values: { background_file: null, background: 'carbon' } }));
+$('logofile').addEventListener('change', (e) => { if (e.target.files[0]) upload('logo', e.target.files[0]); e.target.value = ''; });
+$('bgfile').addEventListener('change', (e) => { if (e.target.files[0]) upload('background', e.target.files[0]); e.target.value = ''; });
+
+buildGrid();
+connect();
+</script>
+</body>
+</html>
