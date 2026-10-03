@@ -30,6 +30,12 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
   move the cable back to the Shield and press Reconnect if it does not send.
 - Measure in Flat mode, sub on, KEF settings unchanged, 5-7 positions averaged.
   Correct below ~300 Hz, mostly cuts, boosts at most +3 dB, 5-8 filters.
+- Scripts (run with `.venv\Scripts\python.exe`): `scripts/rew_compare.py`
+  compares REW text exports and averages positions; `scripts/design_peq.py`
+  fits cut-only peaking filters to an average (scipy least squares).
+- rew_v1 (2026-10-03): 4 cuts, 20.9 Hz -2.8, 39.6 Hz -4.7, 50.1 Hz -3.8,
+  66.7 Hz -6.9 dB, all Q 5, preamp 0. File `~/camilladsp/configs/rew_v1.yml`
+  (copy in `pi/camilladsp/`). Data in `measurements/2026-10-03_*`.
 - REW filter export goes into a new preset (e.g. `rew_v1.yml`) next to
   `room_eq.yml`, with the preamp covering the largest boost.
 
@@ -73,7 +79,12 @@ Not needed for the Pi chain; its value is resale or a car install.
 - NVIDIA Shield is the USB host / source. It sees the Pi as "Linux USB gadget".
 - KEF LS50 Wireless (gen 1) on a blue USB 3 port of the Pi. Subwoofer is fed
   from the KEF's sub out (RCA), so any filter in CamillaDSP also affects the sub.
-- Measurement kit for later: REW + UMIK-1.
+- Measurement kit: REW 5.31.3 (no API in this build) + UMIK-1 serial 7079072.
+- Subwoofer: Rythmik L12 (servo, sealed), fixed position, fed from the KEF sub
+  out into LINE IN "L" (not LFE: on LFE the phase and crossover knobs do
+  nothing). Settings 2026-10-03: delay/phase 0, crossover max (120), LPF slope
+  12 dB, PEQ off, bass extension Low-HT, volume set by ear (user prefers subtle,
+  textured bass). Phase 0 beat 90/180 in REW (smooth 75-95 Hz, no notch).
 
 ## Audio chain
 
