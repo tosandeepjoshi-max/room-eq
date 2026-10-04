@@ -32,13 +32,18 @@ MODES = ("room", "flat", "night", "vocal")
 # Tone faders are the gain filters not named "room ..." (room correction) and not the preamp.
 # Vocal: speech range lifted, low end trimmed. Night: deep bass and top treble cut, plus a compressor.
 DEFAULT_MODE_TONES = {
-    "vocal": {"31 Hz": -2.0, "63 Hz": -3.0, "125 Hz": -3.0, "250 Hz": -1.0, "1 kHz": 1.0,
-              "2 kHz": 3.0, "4 kHz": 2.0},
-    "night": {"31 Hz": -10.0, "63 Hz": -6.0, "125 Hz": -2.0, "4 kHz": -1.0, "8 kHz": -4.0, "16 kHz": -6.0},
+    # Vocal (2026-10-04, from dialogue-EQ guidance): rumble down, mud (200-500 Hz) cut 1-2 dB,
+    # presence 2-4 kHz +2.5-3 dB; 125 Hz kept near 0 so male voices stay full.
+    "vocal": {"31 Hz": -6.0, "63 Hz": -4.0, "125 Hz": -1.0, "250 Hz": -2.0, "500 Hz": -1.0,
+              "1 kHz": 0.0, "2 kHz": 3.0, "4 kHz": 2.5, "8 kHz": 0.0, "16 kHz": 0.0},
+    # Night: deep bass cut hard (carries through walls), slight dialogue lift, sharp highs softened;
+    # the compressor does most of the work.
+    "night": {"31 Hz": -12.0, "63 Hz": -6.0, "125 Hz": -2.0, "250 Hz": -1.0, "500 Hz": 0.0,
+              "1 kHz": 0.0, "2 kHz": 2.0, "4 kHz": 1.0, "8 kHz": -2.0, "16 kHz": -4.0},
 }
 NIGHT_COMPRESSOR = {"type": "Compressor", "parameters": {
-    "channels": 2, "attack": 0.025, "release": 1.0, "threshold": -30.0, "factor": 3.0,
-    "makeup_gain": 6.0, "soft_clip": True, "monitor_channels": [0, 1], "process_channels": [0, 1]}}
+    "channels": 2, "attack": 0.01, "release": 0.6, "threshold": -35.0, "factor": 4.0,
+    "makeup_gain": 8.0, "soft_clip": True, "monitor_channels": [0, 1], "process_channels": [0, 1]}}
 # Touchscreen backlight; writable by the video group, so no sudo is needed.
 BACKLIGHT_DIR = os.environ.get("ROOMEQ_BACKLIGHT") or next(iter(sorted(Path("/sys/class/backlight").glob("*"))), None)
 SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never

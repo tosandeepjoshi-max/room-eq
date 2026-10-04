@@ -179,8 +179,13 @@ How it works:
   Vocal and Night = their own tone-fader values (DEFAULT_MODE_TONES in
   server.py, then remembered per mode in settings.json "mode_tones"). Switching
   mode moves the tone faders; gain changes made in Vocal/Night go to that mode,
-  not the preset (no dirty flag). Night also adds a compressor (threshold
-  -30 dB, ratio 3, makeup +6 dB). Room bands are never changed by modes.
+  not the preset (no dirty flag). Night also adds a compressor. Retuned
+  2026-10-04 from dialogue-EQ and night-mode guidance: Vocal 31 -6, 63 -4,
+  125 -1, 250 -2, 500 -1, 2k +3, 4k +2.5; Night 31 -12, 63 -6, 125 -2, 250 -1,
+  2k +2, 4k +1, 8k -2, 16k -4; compressor threshold -35 dB, ratio 4, attack
+  10 ms, release 0.6 s, makeup +8 dB. Deployed with the overlay ON, so on the
+  Pi it lasts until reboot: turn the overlay off and redeploy server.py (and
+  re-apply the mode values) to make it permanent. Room bands are never changed by modes.
   Bypass button = Flat; "Sub off" button = 80 Hz low cut on its own.
 - Auto preamp (setting `auto_preamp`, default on): the effective preamp is
   minus the largest boost of all active filters (+0.1 dB margin), so boosts
