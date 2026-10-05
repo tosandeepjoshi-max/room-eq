@@ -273,8 +273,8 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
    16:14) were before the change.
 3. ~~Reconnect feature~~: done 2026-10-03. The user installed the helper and the
    sudoers rule; a test through the server took 3.7 s, then Running at 192 kHz.
-3b. Auto-recover after a KEF USB dropout: deployed 2026-10-03, not yet seen
-   live. The KEF's power saving switches it off (it leaves USB) regularly;
+3b. ~~Auto-recover after a KEF USB dropout~~: deployed 2026-10-03, confirmed
+   working live by the user 2026-10-05. The KEF's power saving switches it off (it leaves USB) regularly;
    CamillaDSP then stops with a PlaybackError and stays Inactive. The server's
    status loop (`auto_recover`) waits while a configured card is missing from
    `/proc/asound/`, then re-applies the effective config once both are back
