@@ -296,39 +296,7 @@ Reconnect button:
 
 ## Open items
 
-Paused 2026-10-03. Next: miniDSP flash backup when the CH341A arrives; the
-user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
-
-
-1. ~~Compact layout on the 800 x 480 screen~~: done 2026-10-03 (new fader
-   layout deployed, kiosk restarted, checked live at 800 x 480).
-2. ~~Fix devices config~~: done 2026-10-03. Both presets now have
-   `enable_rate_adjust: true` and no resampler (backups `*.pre-rateadjust`).
-   Load fell to ~3.4 %, rate adjust ~1.0001, buffer converging; the "needless
-   1:1 sample rate conversion" warning is gone. Earlier underruns (16:09,
-   16:14) were before the change.
-3. ~~Reconnect feature~~: done 2026-10-03. The user installed the helper and the
-   sudoers rule; a test through the server took 3.7 s, then Running at 192 kHz.
-3b. ~~Auto-recover after a KEF USB dropout~~: deployed 2026-10-03, confirmed
-   working live by the user 2026-10-05. The KEF's power saving switches it off (it leaves USB) regularly;
-   CamillaDSP then stops with a PlaybackError and stays Inactive. The server's
-   status loop (`auto_recover`) waits while a configured card is missing from
-   `/proc/asound/`, then re-applies the effective config once both are back
-   and shows "Speakers back: audio restarted". Failed attempts back off 5-30 s.
-4. Room measurement with REW + UMIK-1 at the listening position, filters at
-   0 dB, sub running, then replace the placeholder filters.
-5. Larger logo area: done 2026-10-03 (title removed, header 68 px / 56 px on
-   the touchscreen, transparent cropped logo).
-6. Overlay (read-only) file system: **ON since 2026-10-03** (the user chose to
-   accept losing manual slider tweaks at reboot). Turn it OFF before deploying
-   code or presets that must persist, then back on. With it on, nothing is
-   written to the SD card and all changes (presets saved, settings.json mode
-   tones / brightness, uploads, deployed code) vanish at reboot, so it must be
-   OFF while changing things. Check: `findmnt -n -o FSTYPE /` (overlay = on,
-   ext4 = off). On: `ssh -t joshis-pi "sudo raspi-config nonint
-   enable_overlayfs && sudo reboot"`. Off: same with `disable_overlayfs`.
-   Boot-partition write protection (enable_bootro) optional, not needed.
-   After any reboot: wait ~30 s, press Reconnect if the Shield does not play.
+To-dos: see TODO.md.
 
 ## Working rules
 
@@ -336,5 +304,6 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
   running (an interrupted first boot already corrupted the card once).
 - Keep chunksize 1024 and the 192 kHz / S32_LE gadget settings unless the user
   asks otherwise.
+- Overlay file system is ON: turn it off before you deploy (how-to: TODO.md, item 6).
 - Explain changes in plain language; the user is comfortable with the terminal
   but new to Linux audio.
