@@ -1,3 +1,11 @@
+# room-eq
+
+Category: personal
+Path: Projects/personal/room-eq   (use paths relative to this folder)
+Purpose: Raspberry Pi room-correction DSP (CamillaDSP) with a custom touchscreen UI, plus PC-side REW scripts.
+Run: .venv\Scripts\python scripts\<script>.py   (PC helpers; the UI runs on the Pi, see "Room EQ UI")
+Python: 3.12.9, .venv in the project root
+
 # Josh's EQ: Raspberry Pi room-correction DSP
 
 A Raspberry Pi 4 sits between an NVIDIA Shield and a pair of KEF LS50 Wireless
@@ -7,7 +15,7 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
 
 ## Project folder (Windows PC)
 
-`C:\Users\joshi\room-eq\` (on the Pi the UI lives in `~/roomeq-ui/`):
+`C:\Users\joshi\Projects\personal\room-eq\` (on the Pi the UI lives in `~/roomeq-ui/`):
 
 - `ui/`: working copy of `~/roomeq-ui/`. Edit here, then `scp` to the Pi.
 - `pi/`: reference copies of Pi files (`pi/camilladsp/room_eq.yml`, later the
@@ -39,6 +47,16 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
 - REW filter export goes into a new preset (e.g. `rew_v1.yml`) next to
   `room_eq.yml`, with the preamp covering the largest boost.
 
+## Speaker chirp from the display (2026-10-05)
+
+A faint chirp/beep in the KEF stops when the backlight is off (brightness 0)
+and is the same at 255, 150 and 60. CamillaDSP was clean at the time (silent
+input, steady buffer, no clipping). It stayed with the KEF USB cable unplugged
+and came only from the right speaker, next to the Pi, so it is radiated
+interference, not a USB/ground path. It faded out a few minutes after boot, with
+the chirps getting slower, which fits Wi-Fi/boot activity settling. If it comes
+back: test more distance between the Pi and the right speaker, and Wi-Fi off.
+
 ## miniDSP 2x4 HD / DDRC-24 (side issue, 2026-10-03)
 
 The user's old miniDSP (2x4 HD upgraded to DDRC-24 with Dirac) had UMIK-2
@@ -50,6 +68,24 @@ button at power-up changes nothing. The XMOS flash is an Adesto AT45DB321E
 adapter (ordered), read the flash twice as a backup, inspect it for a factory
 image plus the UMIK-2 upgrade image, and only then erase the upgrade image.
 Not needed for the Pi chain; its value is resale or a car install.
+
+2026-10-05 attempt with the Pi as programmer (flashrom linux_spi, SOIC8 clip):
+- The clip's ribbon does not follow chip numbering. Measured map, IDC holes face
+  you with the red stripe left (T = top row, B = bottom row, L/R = clip jaws
+  from the top, wires down, red on the left jaw, XMOS at the board's top left):
+  T1-L4 T2-L3 T3-L2 T4-L1, B1-R4 B2-R3 B3-R2 B4-R1. Wires used: T1 brown (CS),
+  T2 orange (RESET), T3 purple (SCK), T4 blue (SI), B2 red (VCC), B3 white
+  (GND), B4 green (SO), B1 empty (WP).
+- With the Pi supplying 3.3 V, every probe read 0xFF, the Pi logged
+  undervoltage, and the IDC connector got warm: the Pi back-feeds the whole
+  board's 3.3 V rail. Do not power the chip from the Pi again. The board still
+  enumerated as UMIK-2 afterwards (no damage); it needs its own power supply.
+- Self-powered try (no red/orange wires, board on its own supply, grounds joined
+  through white): chip VCC 3.2 V, RESET high, MISO idles high, but RDID still
+  reads 0xFF, also after the 0xAB wake-up command and with the reset button held
+  from power-up. In-circuit read failed; likely the XMOS keeps the SPI lines or a
+  signal tooth has no contact. Options: desolder the chip and read it off-board,
+  or ship the board to miniDSP.
 
 ## Git
 

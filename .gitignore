@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.tmp
 .venv/
+.status/
+.env
+*.log
