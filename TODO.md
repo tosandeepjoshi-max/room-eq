@@ -26,8 +26,9 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
    status loop (`auto_recover`) waits while a configured card is missing from
    `/proc/asound/`, then re-applies the effective config once both are back
    and shows "Speakers back: audio restarted". Failed attempts back off 5-30 s.
-- [ ] 4. Room measurement with REW + UMIK-1 at the listening position, filters at
-   0 dB, sub running, then replace the placeholder filters.
+- [x] 4. Room measurement with REW + UMIK-1: done 2026-10-03. Result is preset
+   `rew_v1.yml` (4 room cuts + tone bank), active on the Pi (checked 2026-10-09).
+   `room_eq.yml` keeps the old placeholder filters as a spare preset.
 - [x] 5. Larger logo area: done 2026-10-03 (title removed, header 68 px / 56 px on
    the touchscreen, transparent cropped logo).
 - [x] 6. Overlay (read-only) file system: **ON since 2026-10-03** (the user chose to
