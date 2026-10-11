@@ -223,6 +223,11 @@ How it works:
   Pi it lasts until reboot: turn the overlay off and redeploy server.py (and
   re-apply the mode values) to make it permanent. Room bands are never changed by modes.
   Bypass button = Flat; "Sub off" button = 80 Hz low cut on its own.
+- Auto mode switch (2026-10-11): Vocal at 23:00, Room EQ at 09:00, US Eastern
+  (`MODE_SCHEDULE` in server.py, `schedule_loop`, checked every 20 s). Each
+  time fires once; a mode the user picks afterwards stays. No catch-up after a
+  restart; a switch more than 10 min late is skipped (boot clock jump). On/off:
+  gear > Schedule (setting `auto_mode`, default on).
 - Auto preamp (setting `auto_preamp`, default on): the effective preamp is
   minus the largest boost of all active filters (+0.1 dB margin), so boosts
   never clip; the preamp fader shows "auto" and cannot be dragged.

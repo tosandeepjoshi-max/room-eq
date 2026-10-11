@@ -13,7 +13,9 @@ import os
 import re
 import shutil
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import yaml
 from aiohttp import web, ClientSession, WSMsgType
@@ -50,6 +52,13 @@ SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never
 # Resets the USB gadget link to the Shield (stop camilladsp, reload g_audio, start camilladsp).
 # Needs a root-owned /usr/local/bin/roomeq-reconnect and a sudoers rule allowing it without a password.
 RECONNECT_CMD = ["sudo", "-n", "/usr/local/bin/roomeq-reconnect"]
+# Automatic mode switches (US Eastern time). Each fires once when its time comes; a mode the user
+# picks afterwards stays until the next switch. Nothing is caught up after a restart, and a switch
+# found more than SCHEDULE_GRACE seconds late (e.g. the clock jumping at boot) is skipped.
+SCHEDULE_TZ = ZoneInfo("America/New_York")
+MODE_SCHEDULE = ((23, 0, "vocal"), (9, 0, "room"))
+SCHEDULE_GRACE = 600
+SCHEDULE_INTERVAL = 20
 LEVEL_INTERVAL = 0.07   # seconds between level updates (~14 per second)
 STATUS_INTERVAL = 1.0
 
@@ -64,6 +73,7 @@ DEFAULT_SETTINGS = {
     "sleep_minutes": 5,          # touchscreen goes dark after this idle time; 0 = never
     "disabled": {},              # config path -> list of filter names switched off
     "mode_tones": copy.deepcopy(DEFAULT_MODE_TONES),   # mode -> {tone fader name: gain dB}
+    "auto_mode": True,           # follow MODE_SCHEDULE
 }
 
 
@@ -176,6 +186,7 @@ class App:
         self.reconnecting = False
         self.recover_delay = 5      # seconds until the next auto-restart attempt; backs off to 30
         self.recover_at = 0
+        self.schedule_done = None   # time of the last scheduled switch already handled
 
     # ---------- settings ----------
     def _load_settings(self):
@@ -216,6 +227,36 @@ class App:
         if self.mode not in DEFAULT_MODE_TONES:
             return None
         return self.settings.setdefault("mode_tones", {}).setdefault(self.mode, {})
+
+    async def set_mode(self, mode):
+        self.mode = mode
+        self.bypass = mode == "flat"
+        await self.apply()
+
+    @staticmethod
+    def last_scheduled(now):
+        """The most recent scheduled switch at or before now, as (time, mode)."""
+        best = None
+        for hour, minute, mode in MODE_SCHEDULE:
+            t = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if t > now:
+                t -= timedelta(days=1)
+            if best is None or t > best[0]:
+                best = (t, mode)
+        return best
+
+    def due_switch(self, now):
+        """Mode to switch to now, or None. Each scheduled time is handled once."""
+        t, mode = self.last_scheduled(now)
+        if self.schedule_done is None:      # first check after start: never catch up
+            self.schedule_done = t
+            return None
+        if t <= self.schedule_done:
+            return None
+        self.schedule_done = t
+        if not self.settings.get("auto_mode", True) or (now - t).total_seconds() > SCHEDULE_GRACE:
+            return None
+        return mode
 
     def view_base(self):
         """The preset as the current mode sees it: tone fader gains replaced by the mode's values."""
@@ -393,7 +434,8 @@ class App:
             "can_undo": bool(self.history),
             "settings": {k: self.settings[k] for k in
                          ("background", "background_file", "logo_file", "opacity",
-                          "brightness", "sleep_minutes", "auto_preamp")},
+                          "brightness", "sleep_minutes", "auto_preamp", "auto_mode")},
+            "mode_schedule": [{"time": f"{h:02d}:{m:02d}", "mode": mode} for h, m, mode in MODE_SCHEDULE],
             "sleep_choices": SLEEP_CHOICES,
             "has_backlight": BACKLIGHT_DIR is not None,
             "screen_on": self.screen_on,
@@ -492,9 +534,7 @@ class App:
             await self.apply()
         elif cmd == "set_mode":
             if msg.get("mode") in MODES:
-                self.mode = msg["mode"]
-                self.bypass = self.mode == "flat"
-                await self.apply()
+                await self.set_mode(msg["mode"])
         elif cmd == "set_bypass":
             self.bypass = bool(msg["value"])
             if self.bypass:
@@ -535,6 +575,8 @@ class App:
                     self.settings[k] = msg["values"][k]
             if int(msg.get("values", {}).get("sleep_minutes", -1)) in SLEEP_CHOICES:
                 self.settings["sleep_minutes"] = int(msg["values"]["sleep_minutes"])
+            if "auto_mode" in msg.get("values", {}):
+                self.settings["auto_mode"] = bool(msg["values"]["auto_mode"])
             if "auto_preamp" in msg.get("values", {}):
                 self.settings["auto_preamp"] = bool(msg["values"]["auto_preamp"])
                 self.save_settings()
@@ -679,6 +721,17 @@ class App:
                 await self.broadcast(st)
             await asyncio.sleep(STATUS_INTERVAL)
 
+    async def schedule_loop(self):
+        names = {"room": "Room EQ", "flat": "Flat", "vocal": "Vocal", "night": "Night"}
+        while True:
+            now = datetime.now(SCHEDULE_TZ)
+            mode = self.due_switch(now)
+            if mode and self.base is not None:
+                await self.set_mode(mode)
+                await self.broadcast({"type": "notice", "ok": True,
+                                      "text": f"Auto switch: {names.get(mode, mode)}"})
+            await asyncio.sleep(SCHEDULE_INTERVAL)
+
 
 app_state = App()
 
@@ -742,7 +795,8 @@ async def index(request):
 async def on_startup(app):
     app_state.apply_backlight()
     app["tasks"] = [asyncio.ensure_future(app_state.level_loop()),
-                    asyncio.ensure_future(app_state.status_loop())]
+                    asyncio.ensure_future(app_state.status_loop()),
+                    asyncio.ensure_future(app_state.schedule_loop())]
 
 
 def main():

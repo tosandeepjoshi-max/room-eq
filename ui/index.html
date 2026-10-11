@@ -342,6 +342,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   </div>
   <div class="oprow"><label for="sleepsel"><span>Sleep after</span></label><select id="sleepsel" class="selbox"></select></div>
   <p class="hint" style="margin:0">Only the touchscreen sleeps. The first touch just wakes it.</p>
+  <h3>Schedule</h3>
+  <div class="oprow"><span>Auto mode switch</span><button class="sw" type="button" role="switch" id="automode" aria-checked="true" aria-label="Auto mode switch"></button></div>
+  <p class="hint" style="margin:0" id="schedhint"></p>
   <h3>Background</h3>
   <div class="tiles" id="tiles">
     <button class="tile" type="button" data-bg="carbon"><i style="background:repeating-linear-gradient(135deg,#1b2029 0 6px,#1f2530 6px 12px)"></i>Carbon</button>
@@ -415,7 +418,8 @@ function startDemo() {
     { name: 'room 67', ...bq('Peaking', 66.7, -6.9, { q: 5 }) },
   ];
   setModel({ type: 'state', config_name: 'room_eq.yml', presets: ['movie.yml', 'room_eq.yml'], filters, samplerate: 192000,
-    mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5 },
+    mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5, auto_mode: true },
+    mode_schedule: [{ time: '23:00', mode: 'vocal' }, { time: '09:00', mode: 'room' }],
     sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], has_backlight: true, screen_on: true, auto_preamp: true, auto_preamp_db: 0 });
   status = { state: 'Running', capture_rate: 192000, temp: 56, load: 12, clipped: 0 }; drawStatus();
   let t = 0;
@@ -929,6 +933,11 @@ function applyScreenSettings() {
   if ($('sleepsel').dataset.opts !== opts) { $('sleepsel').innerHTML = opts; $('sleepsel').dataset.opts = opts; }
   $('sleepsel').value = s.sleep_minutes ?? 0;
   if (armedFor !== (s.sleep_minutes || 0)) armIdle();
+  $('automode').setAttribute('aria-checked', String(s.auto_mode !== false));
+  const label = { room: 'Room EQ', flat: 'Flat', vocal: 'Vocal', night: 'Night' };
+  const clock = (t) => { const [h, m] = t.split(':').map(Number); return (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? ' AM' : ' PM'); };
+  const sched = (model.mode_schedule || []).map((x) => `${label[x.mode] || x.mode} at ${clock(x.time)}`).join(', ');
+  $('schedhint').textContent = sched ? `${sched} (Eastern). Switches once at each time; a mode you pick afterwards stays.` : '';
 }
 let brightTimer = null;
 $('bright').addEventListener('input', (e) => {
@@ -937,6 +946,7 @@ $('bright').addEventListener('input', (e) => {
   brightTimer = setTimeout(() => send({ cmd: 'brightness', value: Number(e.target.value) }), 60);
 });
 $('bright').addEventListener('change', (e) => send({ cmd: 'brightness', value: Number(e.target.value), save: true }));
+$('automode').addEventListener('click', () => send({ cmd: 'settings', values: { auto_mode: !(model.settings && model.settings.auto_mode !== false) } }));
 $('sleepsel').addEventListener('change', (e) => send({ cmd: 'settings', values: { sleep_minutes: Number(e.target.value) } }));
 
 buildGrid();
