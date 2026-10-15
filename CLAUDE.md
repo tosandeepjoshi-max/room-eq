@@ -278,6 +278,11 @@ Reconnect button:
   rate stayed 0, also after Reconnect. Restarting the Shield fixed it. The
   Shield sometimes stops routing sound to the USB output. Order to try:
   Reconnect, then restart the Shield, then replug the USB cable.
+- Shield hint (2026-10-15): status carries `link` (`/sys/class/udc/*/state`).
+  The status line shows "Shield not connected" (link not configured) or "No
+  audio from Shield" (CamillaDSP state Stalled; also normal while nothing
+  plays). 20 s after a Reconnect, if still Stalled with the link up, a toast
+  says to restart the Shield (`shield_hint`, `SHIELD_HINT_DELAY`).
 
 ## Touchscreen kiosk
 

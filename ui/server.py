@@ -59,6 +59,9 @@ SCHEDULE_TZ = ZoneInfo("America/New_York")
 MODE_SCHEDULE = ((23, 0, "vocal"), (9, 0, "room"))
 SCHEDULE_GRACE = 600
 SCHEDULE_INTERVAL = 20
+# After a reconnect, if the Shield link is up but no audio arrives within this time, suggest a Shield
+# restart: the Shield sometimes stops routing sound to its USB output, and only a restart fixes it.
+SHIELD_HINT_DELAY = 20
 LEVEL_INTERVAL = 0.07   # seconds between level updates (~14 per second)
 STATUS_INTERVAL = 1.0
 
@@ -609,12 +612,30 @@ class App:
             self.reconnecting = False
             await self.apply()
             notice = {"type": "notice", "text": "Reconnected", "ok": True}
+            asyncio.ensure_future(self.shield_hint())
         except (OSError, RuntimeError) as exc:
             notice = {"type": "notice", "text": f"Reconnect failed: {exc}", "ok": False}
         finally:
             self.reconnecting = False
         await self.broadcast(notice)
         await self.broadcast_state()
+
+    @staticmethod
+    def usb_link():
+        """USB gadget state: "configured" while the Shield is attached, None if unknown."""
+        for f in Path("/sys/class/udc").glob("*/state"):
+            try:
+                return f.read_text().strip()
+            except OSError:
+                pass
+        return None
+
+    async def shield_hint(self):
+        """After a reconnect: the link is up but still no audio, so the Shield is the likely cause."""
+        await asyncio.sleep(SHIELD_HINT_DELAY)
+        if self.status.get("state") == "Stalled" and self.usb_link() == "configured":
+            await self.broadcast({"type": "notice", "ok": False,
+                                  "text": "Still no audio from the Shield. If something is playing, restart the Shield."})
 
     async def auto_recover(self, state):
         """Restart processing after a device dropout, e.g. the KEF leaving USB when the TV turns on.
@@ -708,6 +729,7 @@ class App:
                     st[key] = await self.cdsp.call(cmd)
                 except RuntimeError:
                     st[key] = None
+            st["link"] = self.usb_link()
             try:
                 st["temp"] = int(Path("/sys/class/thermal/thermal_zone0/temp").read_text()) / 1000
             except (OSError, ValueError):

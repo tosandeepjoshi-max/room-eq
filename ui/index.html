@@ -821,7 +821,10 @@ function drawStatus() {
   const s = status, parts = [];
   const running = s.state === 'Running';
   $('sdot').classList.toggle('run', running);
-  if (!running) parts.push(s.state || 'Offline');
+  // Stalled = CamillaDSP gets no audio; with the USB link up that means the Shield is not sending.
+  if (s.link && s.link !== 'configured') parts.push('Shield not connected');
+  else if (s.state === 'Stalled') parts.push('No audio from Shield');
+  else if (!running) parts.push(s.state || 'Offline');
   if (s.capture_rate) parts.push(`${Math.round(s.capture_rate / 1000)} kHz`);
   if (s.temp != null) parts.push(`${Math.round(s.temp)} °C`);
   if (s.load != null) parts.push(`${Math.round(s.load)}%`);
@@ -860,7 +863,7 @@ async function upload(kind, file) {
 function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function cssEsc(s) { return window.CSS && CSS.escape ? CSS.escape(s) : s.replace(/"/g, '\\"'); }
 let toastTimer;
-function toast(text, ok) { const t = $('toast'); t.textContent = text; t.classList.toggle('ok', !!ok); t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 5000); }
+function toast(text, ok) { const t = $('toast'); t.textContent = text; t.classList.toggle('ok', !!ok); t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ok ? 5000 : 10000); }
 
 /* ---------- events ---------- */
 document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send({ cmd: 'set_mode', mode: b.dataset.mode })));
