@@ -11,7 +11,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [ ] miniDSP flash backup when the CH341A arrives (see CLAUDE.md, "miniDSP 2x4 HD / DDRC-24").
 - [ ] Pi heatsink and closed case (watch CPU temp, ~56 C open).
 - [x] Auto mode switch: Vocal 23:00, Room EQ 09:00 Eastern, once per time (2026-10-11).
-- [~] Make the auto mode switch and the 2026-10-04 Vocal/Night retune permanent on the Pi: deployed to the SD card 2026-10-15 with the overlay off. Left to do: user turns the overlay on again.
+- [x] Make the auto mode switch and the 2026-10-04 Vocal/Night retune permanent on the Pi: saved to the SD card 2026-10-15; overlay on again, code checked after reboot.
 
 - [x] 1. Compact layout on the 800 x 480 screen: done 2026-10-03 (new fader
    layout deployed, kiosk restarted, checked live at 800 x 480).
