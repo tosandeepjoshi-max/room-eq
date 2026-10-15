@@ -274,6 +274,10 @@ Reconnect button:
   `/etc/sudoers.d/roomeq`:
   `joshi ALL=(root) NOPASSWD: /usr/local/bin/roomeq-reconnect`
 - The server re-applies the effective config afterwards.
+- 2026-10-15: after an overlay reboot the link was `configured` but capture
+  rate stayed 0, also after Reconnect. Restarting the Shield fixed it. The
+  Shield sometimes stops routing sound to the USB output. Order to try:
+  Reconnect, then restart the Shield, then replug the USB cable.
 
 ## Touchscreen kiosk
 
