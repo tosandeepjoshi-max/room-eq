@@ -219,9 +219,8 @@ How it works:
   2026-10-04 from dialogue-EQ and night-mode guidance: Vocal 31 -6, 63 -4,
   125 -1, 250 -2, 500 -1, 2k +3, 4k +2.5; Night 31 -12, 63 -6, 125 -2, 250 -1,
   2k +2, 4k +1, 8k -2, 16k -4; compressor threshold -35 dB, ratio 4, attack
-  10 ms, release 0.6 s, makeup +8 dB. Deployed with the overlay ON, so on the
-  Pi it lasts until reboot: turn the overlay off and redeploy server.py (and
-  re-apply the mode values) to make it permanent. Room bands are never changed by modes.
+  10 ms, release 0.6 s, makeup +8 dB. Saved on the Pi 2026-10-15 (overlay off).
+  Room bands are never changed by modes.
   Bypass button = Flat; "Sub off" button = 80 Hz low cut on its own.
 - Auto mode switch (2026-10-11): Vocal at 23:00, Room EQ at 09:00, US Eastern
   (`MODE_SCHEDULE` in server.py, `schedule_loop`, checked every 20 s). Each
