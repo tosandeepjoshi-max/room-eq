@@ -14,6 +14,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Make the auto mode switch and the 2026-10-04 Vocal/Night retune permanent on the Pi: saved to the SD card 2026-10-15; overlay on again, code checked after reboot.
 - [x] Shield no-audio hint: status line shows "No audio from Shield" / "Shield not connected"; 20 s after Reconnect, still no audio -> toast "restart the Shield" (2026-10-15).
 - [x] Restart Shield over ADB: code done and deployed to RAM (2026-10-16).
+- [~] Boot splash: own Plymouth theme `joshs-eq` (logo on black, 800x480, aspect kept). Files staged in `~/plymouth-joshs-eq` on the Pi; user runs the sudo install (2026-10-16).
 - [ ] Set up Restart Shield on the Pi (overlay off): `sudo apt install adb`, Shield Network debugging on, accept the key on the TV, add `shield_mac` to settings.json, test. Also saves the Shield hint. Then overlay on.
 
 - [x] 1. Compact layout on the 800 x 480 screen: done 2026-10-03 (new fader

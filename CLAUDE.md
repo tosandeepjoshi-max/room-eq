@@ -311,6 +311,17 @@ Restart Shield over ADB (2026-10-16):
   USB cable is replugged (until the Reconnect feature exists), and `sudo
   reboot` needs the user's password (SSH key login does not cover sudo).
 
+## Boot splash (2026-10-16)
+
+- Plymouth theme `joshs-eq` (stock theme was `pix`, a 1024x768 image from
+  package `rpd-plym-splash`; left untouched). Source in `pi/plymouth/joshs-eq/`;
+  `splash.png` made by `scripts/make_splash.py` (logo cropped, 80 % of the
+  height, centred on black at 800x480). The script fits the image with its
+  aspect ratio kept.
+- Installed in `/usr/share/plymouth/themes/joshs-eq/`, set with
+  `sudo plymouth-set-default-theme -R joshs-eq` (`-R` rebuilds the initramfs,
+  which holds the theme). Back to stock: same command with `pix`.
+
 ## Health checks
 
 - `systemctl status camilladsp camillagui roomeq-ui`
