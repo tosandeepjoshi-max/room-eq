@@ -53,9 +53,9 @@ SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never
 # Needs a root-owned /usr/local/bin/roomeq-reconnect and a sudoers rule allowing it without a password.
 RECONNECT_CMD = ["sudo", "-n", "/usr/local/bin/roomeq-reconnect"]
 # Automatic mode switches (US Eastern time). Each fires once when its time comes; a mode the user
-# picks afterwards stays until the next switch. At start the mode is the one saved in settings.json
-# if it was set after the last scheduled switch, else the scheduled one (e.g. Vocal after a reboot at
-# 1 AM). The Pi has no RTC, so that choice waits for the clock to be synchronised (CLOCK_SYNCED).
+# picks afterwards stays until the next switch. Every start uses the scheduled mode for the time of
+# day (e.g. Vocal after a reboot at 1 AM), whatever was chosen before. The Pi has no RTC, so this
+# waits for the clock to be synchronised (CLOCK_SYNCED).
 # While running, a switch found more than SCHEDULE_GRACE seconds late is skipped.
 SCHEDULE_TZ = ZoneInfo("America/New_York")
 MODE_SCHEDULE = ((23, 0, "vocal"), (9, 0, "room"))
@@ -85,8 +85,6 @@ DEFAULT_SETTINGS = {
     "disabled": {},              # config path -> list of filter names switched off
     "mode_tones": copy.deepcopy(DEFAULT_MODE_TONES),   # mode -> {tone fader name: gain dB}
     "auto_mode": True,           # follow MODE_SCHEDULE
-    "mode": None,                # last listening mode, restored at start (see MODE_SCHEDULE)
-    "mode_at": None,             # when it was set (Unix time)
     "shield_mac": None,          # Shield's MAC address, for "Restart Shield" over ADB
     "shield_host": None,         # last known Shield IP address
 }
@@ -247,12 +245,7 @@ class App:
     async def set_mode(self, mode):
         self.mode = mode
         self.bypass = mode == "flat"
-        self.remember_mode()
         await self.apply()
-
-    def remember_mode(self):
-        self.settings["mode"], self.settings["mode_at"] = self.mode, time.time()
-        self.save_settings_soon()
 
     @staticmethod
     def last_scheduled(now):
@@ -267,15 +260,10 @@ class App:
         return best
 
     def startup_mode(self, now):
-        """Mode to start in: the saved one if set after the last scheduled switch, else the scheduled one."""
+        """Mode to start in: the scheduled one for this time of day (Room EQ with the schedule off)."""
         t, scheduled = self.last_scheduled(now)
         self.schedule_done = t
-        saved, at = self.settings.get("mode"), self.settings.get("mode_at")
-        if saved in MODES and at and at >= t.timestamp():
-            return saved
-        if self.settings.get("auto_mode", True):
-            return scheduled
-        return saved if saved in MODES else "room"
+        return scheduled if self.settings.get("auto_mode", True) else "room"
 
     def due_switch(self, now):
         """Mode to switch to now, or None. Each scheduled time is handled once."""
@@ -578,7 +566,6 @@ class App:
                 self.mode = "flat"
             elif self.mode == "flat":
                 self.mode = "room"
-            self.remember_mode()
             await self.apply()
         elif cmd == "set_lowcut":
             self.lowcut = bool(msg["value"])

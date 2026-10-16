@@ -16,7 +16,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Restart Shield over ADB: code done and deployed to RAM (2026-10-16).
 - [x] Boot splash: Plymouth theme `joshs-eq` installed (2026-10-16); colour square off (`disable_splash=1`). User confirmed it looks right.
 - [x] Overlay on again 2026-10-16. Splash and disable_splash checked by the user on boot.
-- [x] Start in the scheduled mode after a restart/reboot unless the user changed mode after the last switch (2026-10-16).
+- [x] Every start/restart uses the scheduled mode for the time of day (2026-10-16).
 - [ ] Save the startup-mode fix on the SD card (deployed in RAM only, overlay on).
 - [x] Set up Restart Shield on the Pi: adb installed, key accepted on the Shield, `shield_mac` saved, code on the SD card; real restart tested 2026-10-16 (Shield back in ~45 s, key still accepted).
 
