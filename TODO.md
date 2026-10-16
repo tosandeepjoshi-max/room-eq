@@ -14,8 +14,10 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Make the auto mode switch and the 2026-10-04 Vocal/Night retune permanent on the Pi: saved to the SD card 2026-10-15; overlay on again, code checked after reboot.
 - [x] Shield no-audio hint: status line shows "No audio from Shield" / "Shield not connected"; 20 s after Reconnect, still no audio -> toast "restart the Shield" (2026-10-15).
 - [x] Restart Shield over ADB: code done and deployed to RAM (2026-10-16).
-- [~] Boot splash: Plymouth theme `joshs-eq` installed and set (initramfs rebuilt) 2026-10-16. Left: see it on the next boot (overlay on + reboot).
-- [ ] Turn the overlay on again (off since 2026-10-16 for the adb/splash setup).
+- [x] Boot splash: Plymouth theme `joshs-eq` installed (2026-10-16); colour square off (`disable_splash=1`). User confirmed it looks right.
+- [x] Overlay on again 2026-10-16. Splash and disable_splash checked by the user on boot.
+- [x] Start in the scheduled mode after a restart/reboot unless the user changed mode after the last switch (2026-10-16).
+- [ ] Save the startup-mode fix on the SD card (deployed in RAM only, overlay on).
 - [x] Set up Restart Shield on the Pi: adb installed, key accepted on the Shield, `shield_mac` saved, code on the SD card; real restart tested 2026-10-16 (Shield back in ~45 s, key still accepted).
 
 - [x] 1. Compact layout on the 800 x 480 screen: done 2026-10-03 (new fader

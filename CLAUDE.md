@@ -224,8 +224,12 @@ How it works:
   Bypass button = Flat; "Sub off" button = 80 Hz low cut on its own.
 - Auto mode switch (2026-10-11): Vocal at 23:00, Room EQ at 09:00, US Eastern
   (`MODE_SCHEDULE` in server.py, `schedule_loop`, checked every 20 s). Each
-  time fires once; a mode the user picks afterwards stays. No catch-up after a
-  restart; a switch more than 10 min late is skipped (boot clock jump). On/off:
+  time fires once; a mode the user picks afterwards stays. Each mode change is
+  saved as `mode` + `mode_at` in settings.json. At start (2026-10-16): the saved
+  mode if it was set after the last scheduled switch, else the scheduled mode
+  (reboot at 1 AM -> Vocal). The start waits for
+  `/run/systemd/timesync/synchronized` (max 180 s), since the Pi has no RTC.
+  While running, a switch more than 10 min late is skipped. On/off:
   gear > Schedule (setting `auto_mode`, default on).
 - Auto preamp (setting `auto_preamp`, default on): the effective preamp is
   minus the largest boost of all active filters (+0.1 dB margin), so boosts

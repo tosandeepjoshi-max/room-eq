@@ -53,12 +53,16 @@ SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never
 # Needs a root-owned /usr/local/bin/roomeq-reconnect and a sudoers rule allowing it without a password.
 RECONNECT_CMD = ["sudo", "-n", "/usr/local/bin/roomeq-reconnect"]
 # Automatic mode switches (US Eastern time). Each fires once when its time comes; a mode the user
-# picks afterwards stays until the next switch. Nothing is caught up after a restart, and a switch
-# found more than SCHEDULE_GRACE seconds late (e.g. the clock jumping at boot) is skipped.
+# picks afterwards stays until the next switch. At start the mode is the one saved in settings.json
+# if it was set after the last scheduled switch, else the scheduled one (e.g. Vocal after a reboot at
+# 1 AM). The Pi has no RTC, so that choice waits for the clock to be synchronised (CLOCK_SYNCED).
+# While running, a switch found more than SCHEDULE_GRACE seconds late is skipped.
 SCHEDULE_TZ = ZoneInfo("America/New_York")
 MODE_SCHEDULE = ((23, 0, "vocal"), (9, 0, "room"))
 SCHEDULE_GRACE = 600
 SCHEDULE_INTERVAL = 20
+CLOCK_SYNCED = Path("/run/systemd/timesync/synchronized")   # written by systemd-timesyncd
+CLOCK_WAIT = 180            # seconds to wait for it at start before deciding anyway
 # After a reconnect, if the Shield link is up but no audio arrives within this time, suggest a Shield
 # restart: the Shield sometimes stops routing sound to its USB output, and only a restart fixes it.
 SHIELD_HINT_DELAY = 20
@@ -81,6 +85,8 @@ DEFAULT_SETTINGS = {
     "disabled": {},              # config path -> list of filter names switched off
     "mode_tones": copy.deepcopy(DEFAULT_MODE_TONES),   # mode -> {tone fader name: gain dB}
     "auto_mode": True,           # follow MODE_SCHEDULE
+    "mode": None,                # last listening mode, restored at start (see MODE_SCHEDULE)
+    "mode_at": None,             # when it was set (Unix time)
     "shield_mac": None,          # Shield's MAC address, for "Restart Shield" over ADB
     "shield_host": None,         # last known Shield IP address
 }
@@ -241,7 +247,12 @@ class App:
     async def set_mode(self, mode):
         self.mode = mode
         self.bypass = mode == "flat"
+        self.remember_mode()
         await self.apply()
+
+    def remember_mode(self):
+        self.settings["mode"], self.settings["mode_at"] = self.mode, time.time()
+        self.save_settings_soon()
 
     @staticmethod
     def last_scheduled(now):
@@ -255,12 +266,22 @@ class App:
                 best = (t, mode)
         return best
 
+    def startup_mode(self, now):
+        """Mode to start in: the saved one if set after the last scheduled switch, else the scheduled one."""
+        t, scheduled = self.last_scheduled(now)
+        self.schedule_done = t
+        saved, at = self.settings.get("mode"), self.settings.get("mode_at")
+        if saved in MODES and at and at >= t.timestamp():
+            return saved
+        if self.settings.get("auto_mode", True):
+            return scheduled
+        return saved if saved in MODES else "room"
+
     def due_switch(self, now):
         """Mode to switch to now, or None. Each scheduled time is handled once."""
         t, mode = self.last_scheduled(now)
-        if self.schedule_done is None:      # first check after start: never catch up
-            self.schedule_done = t
-            return None
+        if self.schedule_done is None:
+            return self.startup_mode(now)
         if t <= self.schedule_done:
             return None
         self.schedule_done = t
@@ -557,6 +578,7 @@ class App:
                 self.mode = "flat"
             elif self.mode == "flat":
                 self.mode = "room"
+            self.remember_mode()
             await self.apply()
         elif cmd == "set_lowcut":
             self.lowcut = bool(msg["value"])
@@ -825,14 +847,21 @@ class App:
 
     async def schedule_loop(self):
         names = {"room": "Room EQ", "flat": "Flat", "vocal": "Vocal", "night": "Night"}
+        # Start: wait for a correct clock and a loaded config, then take the startup mode.
+        waited = 0
+        while (not CLOCK_SYNCED.exists() and waited < CLOCK_WAIT) or self.base is None:
+            await asyncio.sleep(5)
+            waited += 5
+        mode = self.startup_mode(datetime.now(SCHEDULE_TZ))
+        if mode != self.mode:
+            await self.set_mode(mode)
         while True:
-            now = datetime.now(SCHEDULE_TZ)
-            mode = self.due_switch(now)
+            await asyncio.sleep(SCHEDULE_INTERVAL)
+            mode = self.due_switch(datetime.now(SCHEDULE_TZ))
             if mode and self.base is not None:
                 await self.set_mode(mode)
                 await self.broadcast({"type": "notice", "ok": True,
                                       "text": f"Auto switch: {names.get(mode, mode)}"})
-            await asyncio.sleep(SCHEDULE_INTERVAL)
 
 
 app_state = App()
