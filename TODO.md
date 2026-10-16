@@ -17,7 +17,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Boot splash: Plymouth theme `joshs-eq` installed (2026-10-16); colour square off (`disable_splash=1`). User confirmed it looks right.
 - [x] Overlay on again 2026-10-16. Splash and disable_splash checked by the user on boot.
 - [x] Every start/restart uses the scheduled mode for the time of day (2026-10-16).
-- [ ] Save the startup-mode fix on the SD card (deployed in RAM only, overlay on).
+- [~] Save the startup-mode fix on the SD card: saved 2026-10-16 01:19 with the overlay off. Left: user turns the overlay on.
 - [x] Set up Restart Shield on the Pi: adb installed, key accepted on the Shield, `shield_mac` saved, code on the SD card; real restart tested 2026-10-16 (Shield back in ~45 s, key still accepted).
 
 - [x] 1. Compact layout on the 800 x 480 screen: done 2026-10-03 (new fader
