@@ -170,6 +170,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#4a1f1c;border:1px solid var(--coral);color:var(--text);padding:10px 16px;border-radius:10px;font-size:13px;max-width:80vw;display:none;z-index:20}
 .toast.show{display:block}
 .toast.ok{background:#173b2c;border-color:#46d39a}
+.toast button{margin-left:12px;height:30px;padding:0 12px;border-radius:8px;border:0;background:var(--coral);color:#1b2029;font-weight:700;cursor:pointer}
+.popbtn{width:100%;height:40px;border-radius:10px;border:1px solid #4a5668;background:transparent;font-size:14px;font-weight:600;cursor:pointer}
+.popbtn:disabled{opacity:.5;cursor:default}
 .ico.busy svg{animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.25}}
 .offline{position:fixed;inset:0;background:rgba(15,18,23,.8);display:none;align-items:center;justify-content:center;font-size:16px;z-index:30;text-align:center;padding:24px;line-height:1.5}
@@ -342,6 +345,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   </div>
   <div class="oprow"><label for="sleepsel"><span>Sleep after</span></label><select id="sleepsel" class="selbox"></select></div>
   <p class="hint" style="margin:0">Only the touchscreen sleeps. The first touch just wakes it.</p>
+  <div id="shieldsec" hidden>
+  <h3>Shield</h3>
+  <button class="popbtn" type="button" id="shieldbtn">Restart Shield</button>
+  <p class="hint" style="margin:0">Use it when the Shield is on but sends no sound. It takes about a minute.</p>
+  </div>
   <h3>Schedule</h3>
   <div class="oprow"><span>Auto mode switch</span><button class="sw" type="button" role="switch" id="automode" aria-checked="true" aria-label="Auto mode switch"></button></div>
   <p class="hint" style="margin:0" id="schedhint"></p>
@@ -396,7 +404,7 @@ function connect() {
     if (msg.type === 'state') { if (dragging) pending = msg; else setModel(msg); }
     else if (msg.type === 'levels') drawLevels(msg);
     else if (msg.type === 'status') { status = msg; drawStatus(); }
-    else if (msg.type === 'notice') toast(msg.text, msg.ok);
+    else if (msg.type === 'notice') toast(msg.text, msg.ok, msg.action);
     else if (msg.type === 'selected') { selected = msg.name; detailKey = ''; if (model) render(); }
   };
 }
@@ -420,7 +428,7 @@ function startDemo() {
   setModel({ type: 'state', config_name: 'room_eq.yml', presets: ['movie.yml', 'room_eq.yml'], filters, samplerate: 192000,
     mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5, auto_mode: true },
     mode_schedule: [{ time: '23:00', mode: 'vocal' }, { time: '09:00', mode: 'room' }],
-    sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], has_backlight: true, screen_on: true, auto_preamp: true, auto_preamp_db: 0 });
+    sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], has_backlight: true, screen_on: true, auto_preamp: true, auto_preamp_db: 0, can_restart_shield: true });
   status = { state: 'Running', capture_rate: 192000, temp: 56, load: 12, clipped: 0 }; drawStatus();
   let t = 0;
   setInterval(() => {
@@ -863,7 +871,15 @@ async function upload(kind, file) {
 function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function cssEsc(s) { return window.CSS && CSS.escape ? CSS.escape(s) : s.replace(/"/g, '\\"'); }
 let toastTimer;
-function toast(text, ok) { const t = $('toast'); t.textContent = text; t.classList.toggle('ok', !!ok); t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ok ? 5000 : 10000); }
+function toast(text, ok, action) {
+  const t = $('toast'); t.textContent = text; t.classList.toggle('ok', !!ok); t.classList.add('show');
+  if (action) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = action.label;
+    b.addEventListener('click', () => { t.classList.remove('show'); send({ cmd: action.cmd }); });
+    t.appendChild(b);
+  }
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), action ? 20000 : ok ? 5000 : 10000);
+}
 
 /* ---------- events ---------- */
 document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => send({ cmd: 'set_mode', mode: b.dataset.mode })));
@@ -937,6 +953,9 @@ function applyScreenSettings() {
   $('sleepsel').value = s.sleep_minutes ?? 0;
   if (armedFor !== (s.sleep_minutes || 0)) armIdle();
   $('automode').setAttribute('aria-checked', String(s.auto_mode !== false));
+  $('shieldsec').hidden = !model.can_restart_shield;
+  $('shieldbtn').disabled = !!model.restarting_shield;
+  $('shieldbtn').textContent = model.restarting_shield ? 'Restarting…' : 'Restart Shield';
   const label = { room: 'Room EQ', flat: 'Flat', vocal: 'Vocal', night: 'Night' };
   const clock = (t) => { const [h, m] = t.split(':').map(Number); return (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + (h < 12 ? ' AM' : ' PM'); };
   const sched = (model.mode_schedule || []).map((x) => `${label[x.mode] || x.mode} at ${clock(x.time)}`).join(', ');
@@ -949,6 +968,7 @@ $('bright').addEventListener('input', (e) => {
   brightTimer = setTimeout(() => send({ cmd: 'brightness', value: Number(e.target.value) }), 60);
 });
 $('bright').addEventListener('change', (e) => send({ cmd: 'brightness', value: Number(e.target.value), save: true }));
+$('shieldbtn').addEventListener('click', () => { if (confirm('Restart the Shield? Playback stops for about a minute.')) send({ cmd: 'restart_shield' }); });
 $('automode').addEventListener('click', () => send({ cmd: 'settings', values: { auto_mode: !(model.settings && model.settings.auto_mode !== false) } }));
 $('sleepsel').addEventListener('change', (e) => send({ cmd: 'settings', values: { sleep_minutes: Number(e.target.value) } }));
 

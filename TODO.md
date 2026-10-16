@@ -13,8 +13,8 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Auto mode switch: Vocal 23:00, Room EQ 09:00 Eastern, once per time (2026-10-11).
 - [x] Make the auto mode switch and the 2026-10-04 Vocal/Night retune permanent on the Pi: saved to the SD card 2026-10-15; overlay on again, code checked after reboot.
 - [x] Shield no-audio hint: status line shows "No audio from Shield" / "Shield not connected"; 20 s after Reconnect, still no audio -> toast "restart the Shield" (2026-10-15).
-- [ ] Save the Shield hint on the SD card (deployed in RAM only, overlay on). Do it with the next overlay-off deploy.
-- [ ] Idea: "Restart Shield" from the Pi over ADB (Shield: Network debugging on; Pi: `apt install adb`, approve key once; then `adb reboot`). Needs the user's yes.
+- [x] Restart Shield over ADB: code done and deployed to RAM (2026-10-16).
+- [ ] Set up Restart Shield on the Pi (overlay off): `sudo apt install adb`, Shield Network debugging on, accept the key on the TV, add `shield_mac` to settings.json, test. Also saves the Shield hint. Then overlay on.
 
 - [x] 1. Compact layout on the 800 x 480 screen: done 2026-10-03 (new fader
    layout deployed, kiosk restarted, checked live at 800 x 480).

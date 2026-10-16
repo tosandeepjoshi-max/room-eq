@@ -284,6 +284,18 @@ Reconnect button:
   plays). 20 s after a Reconnect, if still Stalled with the link up, a toast
   says to restart the Shield (`shield_hint`, `SHIELD_HINT_DELAY`).
 
+Restart Shield over ADB (2026-10-16):
+- Gear > Shield > Restart Shield, and the button in the "Still no audio" toast.
+  Command `restart_shield`: `adb connect <ip>:5555`, `get-state` must be
+  `device`, then `adb reboot`. Shown only when `adb` is installed and
+  `settings.json` has `shield_mac`.
+- Shield MAC `00:04:4b:74:5f:62` (NVIDIA), IP `192.168.110.211` on 2026-10-15.
+  The server finds the IP by MAC (`ip neigh`, ping sweep of the /24 if needed)
+  and stores it as `shield_host`.
+- Shield side: Developer options > Network debugging on; the Pi's ADB key is
+  accepted once on the TV ("Always allow"). The key is `~/.android/adbkey` on
+  the Pi: create it with the overlay off, or it is lost at reboot.
+
 ## Touchscreen kiosk
 
 - `~/.config/autostart/camillagui.desktop` (name kept from the CamillaGUI days):

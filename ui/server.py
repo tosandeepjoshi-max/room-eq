@@ -62,6 +62,10 @@ SCHEDULE_INTERVAL = 20
 # After a reconnect, if the Shield link is up but no audio arrives within this time, suggest a Shield
 # restart: the Shield sometimes stops routing sound to its USB output, and only a restart fixes it.
 SHIELD_HINT_DELAY = 20
+# Restart the Shield over ADB (Shield: Developer options > Network debugging; Pi: apt install adb,
+# key approved once on the TV). The Shield is found by its MAC address, so a new DHCP address is fine.
+ADB = shutil.which("adb")
+ADB_PORT = 5555
 LEVEL_INTERVAL = 0.07   # seconds between level updates (~14 per second)
 STATUS_INTERVAL = 1.0
 
@@ -77,6 +81,8 @@ DEFAULT_SETTINGS = {
     "disabled": {},              # config path -> list of filter names switched off
     "mode_tones": copy.deepcopy(DEFAULT_MODE_TONES),   # mode -> {tone fader name: gain dB}
     "auto_mode": True,           # follow MODE_SCHEDULE
+    "shield_mac": None,          # Shield's MAC address, for "Restart Shield" over ADB
+    "shield_host": None,         # last known Shield IP address
 }
 
 
@@ -187,6 +193,7 @@ class App:
         self.screen_on = True
         self.screen_owner = None    # the screen (websocket) that put the display to sleep
         self.reconnecting = False
+        self.restarting_shield = False
         self.recover_delay = 5      # seconds until the next auto-restart attempt; backs off to 30
         self.recover_at = 0
         self.schedule_done = None   # time of the last scheduled switch already handled
@@ -445,6 +452,8 @@ class App:
             "auto_preamp": bool(self.settings.get("auto_preamp")),
             "auto_preamp_db": self.auto_preamp_db() if self.base and self.settings.get("auto_preamp") else None,
             "reconnecting": self.reconnecting,
+            "can_restart_shield": bool(ADB and self.settings.get("shield_mac")),
+            "restarting_shield": self.restarting_shield,
             "error": self.error,
         }
 
@@ -471,6 +480,10 @@ class App:
         if cmd == "reconnect":
             if not self.reconnecting:
                 asyncio.ensure_future(self.reconnect())
+            return
+        if cmd == "restart_shield":
+            if not self.restarting_shield:
+                asyncio.ensure_future(self.restart_shield())
             return
         if cmd == "brightness":
             # Live while dragging; saved to settings.json only when save is true (the slider is released).
@@ -634,8 +647,75 @@ class App:
         """After a reconnect: the link is up but still no audio, so the Shield is the likely cause."""
         await asyncio.sleep(SHIELD_HINT_DELAY)
         if self.status.get("state") == "Stalled" and self.usb_link() == "configured":
-            await self.broadcast({"type": "notice", "ok": False,
-                                  "text": "Still no audio from the Shield. If something is playing, restart the Shield."})
+            notice = {"type": "notice", "ok": False,
+                      "text": "Still no audio from the Shield. If something is playing, restart the Shield."}
+            if ADB and self.settings.get("shield_mac"):
+                notice["action"] = {"cmd": "restart_shield", "label": "Restart Shield"}
+            await self.broadcast(notice)
+
+    @staticmethod
+    async def run(*args, timeout=15):
+        """Run a command; returns (exit code, output). Exit code -1 on timeout."""
+        proc = await asyncio.create_subprocess_exec(
+            *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+        try:
+            out, _ = await asyncio.wait_for(proc.communicate(), timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            return -1, "timed out"
+        return proc.returncode, out.decode(errors="replace").strip()
+
+    async def find_shield(self):
+        """IP address of the Shield: the last known one if its MAC still matches, else a ping sweep."""
+        mac = (self.settings.get("shield_mac") or "").lower()
+
+        async def lookup():
+            _, out = await self.run("ip", "-4", "neigh")
+            for line in out.splitlines():
+                if mac and mac in line.lower() and "FAILED" not in line:
+                    return line.split()[0]
+            return None
+        host = self.settings.get("shield_host")
+        if host:
+            await self.run("ping", "-c1", "-W1", host, timeout=3)
+        ip = await lookup()
+        if ip is None:
+            _, route = await self.run("ip", "-4", "route", "show", "default")
+            m = re.search(r"src (\d+\.\d+\.\d+)\.\d+", route)
+            if m:
+                await asyncio.gather(*(self.run("ping", "-c1", "-W1", f"{m.group(1)}.{i}", timeout=3)
+                                       for i in range(1, 255)))
+                ip = await lookup()
+        if ip and ip != host:
+            self.settings["shield_host"] = ip
+            self.save_settings()
+        return ip
+
+    async def restart_shield(self):
+        """Reboot the Shield over ADB. It fixes the Shield no longer routing sound to its USB output."""
+        self.restarting_shield = True
+        await self.broadcast_state()
+        try:
+            if not ADB or not self.settings.get("shield_mac"):
+                raise RuntimeError("not set up")
+            ip = await self.find_shield()
+            if not ip:
+                raise RuntimeError("Shield not found on the network")
+            target = f"{ip}:{ADB_PORT}"
+            code, out = await self.run(ADB, "connect", target)
+            if code or "connected" not in out:
+                raise RuntimeError(f"ADB: {out or code}. Is Network debugging on?")
+            code, out = await self.run(ADB, "-s", target, "get-state", timeout=5)
+            if out != "device":
+                raise RuntimeError("ADB not allowed yet: accept the prompt on the TV, then try again")
+            await self.run(ADB, "-s", target, "reboot", timeout=10)
+            notice = {"type": "notice", "ok": True, "text": "Shield restarting: sound returns in about a minute"}
+        except (OSError, RuntimeError) as exc:
+            notice = {"type": "notice", "ok": False, "text": f"Restart Shield failed: {exc}"}
+        finally:
+            self.restarting_shield = False
+        await self.broadcast(notice)
+        await self.broadcast_state()
 
     async def auto_recover(self, state):
         """Restart processing after a device dropout, e.g. the KEF leaving USB when the TV turns on.
