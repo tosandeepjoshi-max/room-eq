@@ -10,6 +10,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 
 - [ ] miniDSP flash backup when the CH341A arrives (see CLAUDE.md, "miniDSP 2x4 HD / DDRC-24").
 - [ ] Pi heatsink and closed case (watch CPU temp, ~56 C open).
+- [~] Phone EQ page: sweep + UMIK-1 measurement and PEQ design in Chrome on Android (car tuning), exports for Poweramp EQ / Equalizer314 / Wavelet / CamillaDSP. Source `web/phone_eq.html`.
 - [x] Auto mode switch: Vocal 23:00, Room EQ 09:00 Eastern, once per time (2026-10-11).
 - [x] Make the auto mode switch and the 2026-10-04 Vocal/Night retune permanent on the Pi: saved to the SD card 2026-10-15; overlay on again, code checked after reboot.
 - [x] Shield no-audio hint: status line shows "No audio from Shield" / "Shield not connected"; 20 s after Reconnect, still no audio -> toast "restart the Shield" (2026-10-15).

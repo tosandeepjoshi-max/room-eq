@@ -1,0 +1,705 @@
+<title>Josh's EQ Pocket</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column of instrument panels on a phone; chart + controls side by side on wide screens. Room EQ palette (slate, coral, cyan). */
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --panel2:#f5f7fa; --fg:#1b2230; --muted:#5b6678; --line:#d5dbe4;
+  --accent:#d9534b; --accent-ink:#ffffff; --cyan:#0e8f9f; --ok:#2f8f57; --warn:#b7791f; --bad:#c0392b;
+  --plot-grid:rgba(27,34,48,.09); --pos:rgba(91,102,120,.45);
+  --display:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --panel:#1d232d; --panel2:#232a35; --fg:#e7ebf1; --muted:#8e99aa; --line:#2e3644;
+  --accent:#ff7a72; --accent-ink:#1a1010; --cyan:#3ccfe0; --ok:#4cc38a; --warn:#e3b341; --bad:#ff6b6b;
+  --plot-grid:rgba(231,235,241,.08); --pos:rgba(142,153,170,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --panel:#1d232d; --panel2:#232a35; --fg:#e7ebf1; --muted:#8e99aa; --line:#2e3644;
+  --accent:#ff7a72; --accent-ink:#1a1010; --cyan:#3ccfe0; --ok:#4cc38a; --warn:#e3b341; --bad:#ff6b6b;
+  --plot-grid:rgba(231,235,241,.08); --pos:rgba(142,153,170,.45); color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px;display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px}
+h1{font:800 26px/1.1 var(--display);letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 span{color:var(--accent)}
+h2{font:700 13px/1.2 var(--display);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0}
+.sub{color:var(--muted);font-size:13px}
+.status{display:flex;flex-wrap:wrap;gap:8px}
+.pill{font:600 12px/1 var(--mono);padding:7px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill b{color:var(--fg);font-weight:600}
+.pill.ok b{color:var(--ok)} .pill.warn b{color:var(--warn)}
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.grid{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,.btn{font:700 14px/1 var(--body);border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);padding:11px 14px;cursor:pointer;min-height:42px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.steps{margin:0;padding-left:20px;color:var(--muted);font-size:13.5px;display:grid;gap:3px}
+.steps b{color:var(--fg)}
+.note{font-size:13px;color:var(--muted);border-left:3px solid var(--cyan);padding:4px 0 4px 10px}
+.msg{font-size:13.5px;min-height:1.5em}
+.msg.bad{color:var(--bad)} .msg.ok{color:var(--ok)} .msg.warn{color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 10px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font:600 12.5px/1.2 var(--mono)}
+.chip .q{font-weight:400;color:var(--muted)}
+.chip .q.warn{color:var(--warn)}
+.chip button{min-height:28px;padding:4px 8px;font-size:12px}
+.chart{position:relative;width:100%;aspect-ratio:16/10;max-width:100%}
+@media (max-width:600px){.chart{aspect-ratio:4/3.4}}
+canvas{width:100%;height:100%;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font:12px/1.2 var(--mono);color:var(--muted)}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.banner{font-size:13px;background:var(--panel2);border:1px dashed var(--line);border-radius:8px;padding:8px 10px;color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+label{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:600}
+input,select,textarea{font:500 14px/1.2 var(--mono);color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%;min-width:0;box-sizing:border-box}
+table{width:100%;border-collapse:collapse;font:13px/1.3 var(--mono);font-variant-numeric:tabular-nums}
+th{text-align:right;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td.cut{color:var(--accent)} td.boost{color:var(--cyan)}
+.summary{font:12.5px/1.4 var(--mono);color:var(--muted)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{min-height:34px;padding:7px 10px;font-size:12.5px}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+textarea{min-height:150px;resize:vertical;font-size:12.5px;line-height:1.45;white-space:pre;overflow:auto}
+details{font-size:13.5px;color:var(--muted)}
+details summary{cursor:pointer;color:var(--fg);font-weight:700}
+details p,details ul{margin:.5em 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Josh's EQ <span>Pocket</span></h1>
+      <div class="sub">Measure a car or room with the UMIK-1 and get PEQ filters for your phone's EQ app.</div>
+    </div>
+    <div class="status" id="status">
+      <span class="pill" id="pillMic">Mic: <b>checking</b></span>
+      <span class="pill ok" id="pillCal">Cal: <b>UMIK-1 7079072</b></span>
+      <span class="pill" id="pillRate">Rate: <b>—</b></span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="hResp">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="hResp">Response</h2>
+        <div class="legend" id="legend">
+          <span><i style="border-color:var(--pos)"></i>positions</span>
+          <span><i style="border-color:var(--fg)"></i>average</span>
+          <span><i style="border-color:var(--cyan);border-top-style:dashed"></i>target</span>
+          <span><i style="border-color:var(--accent)"></i>with EQ</span>
+        </div>
+      </div>
+      <div class="banner" id="exampleBanner">Example data: living room, centre seat, measured with REW on 2026-10-03. Add your own recording to replace it.</div>
+      <div class="chart"><canvas id="plot" aria-label="Frequency response chart" role="img"></canvas></div>
+      <div class="chips" id="positions" aria-label="Measured positions"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="hMeasure">
+      <h2 id="hMeasure">Measure</h2>
+      <ol class="steps">
+        <li>Plug the <b>UMIK-1</b> into the phone. Set the car stereo to a normal listening level.</li>
+        <li>Put the mic where your head is, pointing at the roof.</li>
+        <li><b>Live:</b> tap <b>Measure</b>. <b>Recorder app:</b> start recording, tap <b>Play sweep</b>, stop, then add the WAV.</li>
+        <li>Move the mic 10–20 cm and repeat. 5–7 positions is good.</li>
+      </ol>
+      <div class="row">
+        <button class="primary" id="btnLive" type="button">Measure (live mic)</button>
+        <button id="btnPlay" type="button">Play sweep</button>
+        <label class="btn" for="fileIn" style="display:inline-flex;align-items:center;font-size:14px;color:var(--fg);font-weight:700">Add WAV recording</label>
+        <input id="fileIn" type="file" accept="audio/*,.wav" multiple hidden>
+      </div>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>
+      <div class="note" id="liveNote" hidden>The live mic is blocked on this page host. Use a recorder app (WAV, 48 kHz, USB mic, no effects) and add the file. The same page hosted on its own HTTPS site can use the mic live.</div>
+      <details>
+        <summary>Recorder app settings</summary>
+        <ul>
+          <li>Format WAV (PCM), 48 kHz. Mono or stereo is fine.</li>
+          <li>Input: the USB microphone (UMIK-1).</li>
+          <li>Turn off noise reduction, auto gain and any effect.</li>
+          <li>The page finds the sweep inside the recording, so extra seconds before or after are fine.</li>
+        </ul>
+      </details>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="hDesign">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="hDesign">Filters</h2>
+        <div class="row">
+          <button type="button" id="preCar">Car</button>
+          <button type="button" id="preRoom">Room</button>
+        </div>
+      </div>
+      <div class="fields">
+        <label for="fLo">Correct from (Hz)<input id="fLo" type="number" inputmode="decimal" min="15" max="2000"></label>
+        <label for="fHi">Correct up to (Hz)<input id="fHi" type="number" inputmode="decimal" min="40" max="5000"></label>
+        <label for="rLo">Level reference from (Hz)<input id="rLo" type="number" inputmode="decimal" min="50" max="10000"></label>
+        <label for="rHi">Level reference to (Hz)<input id="rHi" type="number" inputmode="decimal" min="80" max="20000"></label>
+        <label for="lift">Bass lift (dB)<input id="lift" type="number" inputmode="decimal" step="0.5" min="0" max="12"></label>
+        <label for="nF">Max filters<input id="nF" type="number" inputmode="numeric" min="1" max="10"></label>
+        <label for="qMax">Narrowest Q<input id="qMax" type="number" inputmode="decimal" step="0.5" min="1" max="10"></label>
+        <label for="boost">Max boost (dB)<input id="boost" type="number" inputmode="decimal" step="0.5" min="0" max="6"></label>
+        <label for="smooth">Smoothing<select id="smooth"><option value="0.0833">1/12 octave</option><option value="0.1667">1/6 octave</option><option value="0.3333">1/3 octave</option></select></label>
+        <label for="win">IR window, new recordings (ms)<input id="win" type="number" inputmode="numeric" min="50" max="1000" step="10"></label>
+      </div>
+      <table aria-label="Designed filters">
+        <thead><tr><th>#</th><th>Freq</th><th>Gain</th><th>Q</th></tr></thead>
+        <tbody id="ftable"></tbody>
+      </table>
+      <div class="summary" id="summary"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="hExport">
+      <h2 id="hExport">Export</h2>
+      <div class="tabs" role="tablist" id="tabs">
+        <button type="button" role="tab" data-fmt="apo" aria-selected="true">Poweramp / Eq314 / JamesDSP</button>
+        <button type="button" role="tab" data-fmt="graphic" aria-selected="false">Wavelet GraphicEQ</button>
+        <button type="button" role="tab" data-fmt="camilla" aria-selected="false">CamillaDSP</button>
+        <button type="button" role="tab" data-fmt="list" aria-selected="false">Plain list</button>
+      </div>
+      <textarea id="out" readonly aria-label="Export text"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btnCopy">Copy</button>
+        <button type="button" id="btnSave">Save as file</button>
+      </div>
+      <div class="msg" id="msgOut" role="status" aria-live="polite"></div>
+      <div class="note" id="fmtNote"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ---------- data ----------
+const CAL = [[10.054,-3.5387],[10.179,-3.3894],[10.306,-3.2434],[10.434,-3.1005],[10.564,-2.9608],[10.696,-2.8242],[10.829,-2.6908],[10.964,-2.5604],[11.1,-2.4329],[11.238,-2.3085],[11.378,-2.1871],[11.52,-2.0686],[11.663,-1.953],[11.809,-1.8404],[11.956,-1.7305],[12.104,-1.6233],[12.255,-1.5191],[12.408,-1.4175],[12.562,-1.3187],[12.718,-1.2224],[12.877,-1.129],[13.037,-1.038],[13.199,-0.9496],[13.364,-0.8639],[13.53,-0.7806],[13.698,-0.6997],[13.869,-0.6214],[14.042,-0.5455],[14.216,-0.4719],[14.393,-0.4007],[14.573,-0.3319],[14.754,-0.2653],[14.938,-0.201],[15.124,-0.1389],[15.312,-0.079],[15.503,-0.0212],[15.696,0.0344],[15.891,0.0879],[16.089,0.1394],[16.289,0.1888],[16.492,0.2363],[16.697,0.2818],[16.905,0.3253],[17.115,0.3669],[17.328,0.4067],[17.544,0.4446],[17.763,0.4807],[17.984,0.5151],[18.208,0.5477],[18.434,0.5786],[18.664,0.6078],[18.896,0.6354],[19.131,0.6614],[19.369,0.6858],[19.611,0.7085],[19.855,0.7299],[20.102,0.7497],[20.352,0.7681],[20.605,0.7851],[20.862,0.8007],[21.122,0.8149],[21.385,0.8278],[21.651,0.8394],[21.92,0.8498],[22.193,0.8589],[22.47,0.8668],[22.749,0.8737],[23.032,0.8793],[23.319,0.8839],[23.609,0.8874],[23.903,0.8898],[24.201,0.8913],[24.502,0.8918],[24.807,0.8914],[25.116,0.89],[25.429,0.8878],[25.745,0.8848],[26.066,0.8809],[26.39,0.8763],[26.719,0.8709],[27.051,0.8648],[27.388,0.8581],[27.729,0.8507],[28.074,0.8426],[28.424,0.834],[28.778,0.8249],[29.136,0.8152],[29.499,0.8051],[29.866,0.7945],[30.238,0.7835],[30.614,0.7721],[30.995,0.7603],[31.381,0.7483],[31.772,0.7359],[32.167,0.7233],[32.568,0.7104],[32.973,0.6974],[33.383,0.6842],[33.799,0.6708],[34.22,0.6574],[34.646,0.6439],[35.077,0.6304],[35.514,0.6165],[35.956,0.6025],[36.403,0.5887],[36.857,0.5754],[37.315,0.5628],[37.78,0.5507],[38.25,0.5389],[38.726,0.5272],[39.209,0.5152],[39.697,0.5024],[40.191,0.4889],[40.691,0.4748],[41.198,0.4603],[41.711,0.4457],[42.23,0.4314],[42.756,0.418],[43.288,0.4057],[43.827,0.3947],[44.372,0.3852],[44.925,0.3774],[45.484,0.3714],[46.05,0.3671],[46.623,0.3643],[47.204,0.3627],[47.791,0.362],[48.386,0.3616],[48.989,0.3613],[49.599,0.3608],[50.216,0.3598],[50.841,0.3581],[51.474,0.3555],[52.115,0.3517],[52.764,0.3465],[53.42,0.3396],[54.085,0.3309],[54.759,0.3206],[55.44,0.3091],[56.131,0.2964],[56.829,0.283],[57.537,0.269],[58.253,0.2549],[58.978,0.2407],[59.712,0.2266],[60.456,0.2127],[61.208,0.1989],[61.97,0.1852],[62.742,0.1718],[63.523,0.1588],[64.314,0.1464],[65.114,0.1351],[65.925,0.1254],[66.745,0.1175],[67.576,0.1114],[68.418,0.1071],[69.269,0.1045],[70.132,0.1034],[71.005,0.1031],[71.889,0.1034],[72.784,0.1037],[73.69,0.1036],[74.607,0.1026],[75.536,0.1004],[76.476,0.0967],[77.428,0.0916],[78.392,0.0852],[79.368,0.0779],[80.356,0.0702],[81.356,0.0621],[82.369,0.0539],[83.394,0.0455],[84.433,0.0369],[85.484,0.0279],[86.548,0.0184],[87.625,0.0084],[88.716,-0.0019],[89.82,-0.0122],[90.939,-0.022],[92.071,-0.031],[93.217,-0.039],[94.377,-0.0459],[95.552,-0.0517],[96.742,-0.0568],[97.946,-0.0615],[99.165,-0.066],[100.4,-0.0707],[101.65,-0.0757],[102.915,-0.0813],[104.196,-0.0873],[105.493,-0.0937],[106.806,-0.1004],[108.136,-0.1074],[109.482,-0.1146],[110.845,-0.1221],[112.225,-0.13],[113.622,-0.1384],[115.037,-0.1474],[116.469,-0.1571],[117.919,-0.1674],[119.386,-0.1783],[120.873,-0.1895],[122.377,-0.2007],[123.901,-0.2116],[125.443,-0.2219],[127.005,-0.2315],[128.586,-0.2401],[130.187,-0.248],[131.807,-0.255],[133.448,-0.2612],[135.109,-0.2668],[136.791,-0.2718],[138.494,-0.2761],[140.218,-0.2797],[141.964,-0.2826],[143.731,-0.2848],[145.52,-0.2865],[147.332,-0.2879],[149.166,-0.2891],[151.023,-0.2902],[152.903,-0.2915],[154.806,-0.2931],[156.734,-0.2949],[158.685,-0.297],[160.66,-0.2994],[162.66,-0.3021],[164.685,-0.3049],[166.735,-0.3077],[168.811,-0.3105],[170.912,-0.3135],[173.04,-0.3166],[175.194,-0.3199],[177.375,-0.3235],[179.583,-0.3271],[181.819,-0.3307],[184.082,-0.334],[186.374,-0.3368],[188.694,-0.339],[191.043,-0.3408],[193.421,-0.3424],[195.829,-0.3437],[198.267,-0.345],[200.735,-0.3461],[203.234,-0.3472],[205.764,-0.3484],[208.325,-0.3496],[210.919,-0.3512],[213.544,-0.353],[216.203,-0.3551],[218.894,-0.3573],[221.619,-0.3598],[224.378,-0.3622],[227.171,-0.3645],[229.999,-0.3667],[232.862,-0.3688],[235.761,-0.3708],[238.696,-0.3727],[241.668,-0.3743],[244.676,-0.3756],[247.722,-0.3766],[250.806,-0.3776],[253.928,-0.3783],[257.089,-0.3789],[260.29,-0.3792],[263.53,-0.379],[266.81,-0.3783],[270.132,-0.3774],[273.495,-0.3765],[276.899,-0.3757],[280.346,-0.3751],[283.836,-0.3744],[287.37,-0.3737],[290.947,-0.3727],[294.569,-0.3715],[298.236,-0.37],[301.949,-0.3684],[305.708,-0.3667],[309.513,-0.365],[313.366,-0.3633],[317.267,-0.3614],[321.217,-0.359],[325.216,-0.3563],[329.264,-0.3533],[333.363,-0.3502],[337.513,-0.347],[341.715,-0.3438],[345.969,-0.3405],[350.276,-0.337],[354.636,-0.3334],[359.051,-0.3296],[363.521,-0.3257],[368.046,-0.3217],[372.628,-0.3177],[377.266,-0.3143],[381.963,-0.3112],[386.718,-0.3088],[391.532,-0.307],[396.406,-0.3055],[401.341,-0.304],[406.337,-0.3021],[411.395,-0.3001],[416.517,-0.298],[421.702,-0.2958],[426.951,-0.2934],[432.266,-0.291],[437.648,-0.2886],[443.096,-0.2863],[448.612,-0.2836],[454.196,-0.2808],[459.851,-0.2775],[465.575,-0.2739],[471.371,-0.2699],[477.239,-0.2657],[483.18,-0.2614],[489.195,-0.2568],[495.285,-0.2523],[501.45,-0.2479],[507.693,-0.2438],[514.013,-0.24],[520.412,-0.2365],[526.89,-0.2333],[533.449,-0.2304],[540.09,-0.2276],[546.814,-0.2247],[553.621,-0.2218],[560.513,-0.2185],[567.49,-0.215],[574.555,-0.2114],[581.707,-0.2076],[588.949,-0.2037],[596.281,-0.1997],[603.703,-0.1955],[611.219,-0.1913],[618.828,-0.1867],[626.531,-0.1817],[634.331,-0.1764],[642.228,-0.1704],[650.222,-0.164],[658.317,-0.1575],[666.512,-0.1512],[674.809,-0.1454],[683.21,-0.14],[691.715,-0.1346],[700.326,-0.1293],[709.044,-0.1239],[717.871,-0.1187],[726.807,-0.1136],[735.855,-0.1085],[745.016,-0.1035],[754.29,-0.0987],[763.68,-0.094],[773.187,-0.0893],[782.812,-0.0846],[792.557,-0.08],[802.424,-0.0753],[812.413,-0.0705],[822.526,-0.0655],[832.766,-0.0603],[843.133,-0.0549],[853.629,-0.0494],[864.255,-0.044],[875.014,-0.0387],[885.907,-0.0337],[896.935,-0.0293],[908.101,-0.0255],[919.406,-0.0224],[930.851,-0.0198],[942.439,-0.0178],[954.171,-0.0162],[966.049,-0.0151],[978.076,-0.0144],[990.251,-0.0143],[1002.579,-0.0146],[1015.06,-0.0152],[1027.696,-0.0162],[1040.489,-0.0174],[1053.442,-0.0185],[1066.556,-0.0196],[1079.833,-0.0205],[1093.276,-0.0211],[1106.886,-0.0214],[1120.665,-0.0214],[1134.616,-0.021],[1148.741,-0.0203],[1163.041,-0.0193],[1177.519,-0.0181],[1192.178,-0.0167],[1207.019,-0.015],[1222.045,-0.013],[1237.258,-0.0109],[1252.66,-0.0085],[1268.254,-0.0059],[1284.042,-0.0032],[1300.027,-0.0003],[1316.211,0.0027],[1332.596,0.0058],[1349.185,0.009],[1365.981,0.0122],[1382.985,0.0154],[1400.202,0.0186],[1417.633,0.0219],[1435.28,0.0251],[1453.148,0.0286],[1471.238,0.0325],[1489.553,0.0368],[1508.096,0.0418],[1526.87,0.0474],[1545.877,0.0538],[1565.121,0.0609],[1584.605,0.0687],[1604.332,0.0774],[1624.303,0.0869],[1644.524,0.0972],[1664.996,0.1085],[1685.723,0.1205],[1706.708,0.133],[1727.955,0.1458],[1749.466,0.159],[1771.244,0.1723],[1793.294,0.1857],[1815.618,0.1993],[1838.221,0.2131],[1861.104,0.2272],[1884.272,0.2416],[1907.729,0.2564],[1931.478,0.2716],[1955.523,0.2875],[1979.866,0.304],[2004.513,0.3213],[2029.467,0.3392],[2054.731,0.3577],[2080.31,0.3763],[2106.207,0.3948],[2132.427,0.413],[2158.973,0.4309],[2185.849,0.4487],[2213.06,0.4663],[2240.61,0.4837],[2268.503,0.5005],[2296.743,0.5166],[2325.334,0.5316],[2354.282,0.5459],[2383.59,0.56],[2413.262,0.5743],[2443.305,0.5889],[2473.721,0.6038],[2504.515,0.619],[2535.693,0.6345],[2567.26,0.6501],[2599.219,0.666],[2631.576,0.682],[2664.335,0.6982],[2697.503,0.7146],[2731.084,0.7315],[2765.082,0.7486],[2799.504,0.7661],[2834.354,0.784],[2869.638,0.8023],[2905.362,0.821],[2941.53,0.8402],[2978.148,0.8597],[3015.222,0.8796],[3052.758,0.8998],[3090.761,0.9203],[3129.237,0.9411],[3168.192,0.9621],[3207.632,0.9833],[3247.563,1.0045],[3287.991,1.0259],[3328.923,1.0473],[3370.364,1.069],[3412.32,1.0911],[3454.799,1.1142],[3497.807,1.1388],[3541.351,1.165],[3585.436,1.1927],[3630.07,1.2215],[3675.26,1.251],[3721.012,1.281],[3767.334,1.3117],[3814.233,1.3433],[3861.715,1.3757],[3909.789,1.4086],[3958.46,1.4415],[4007.738,1.474],[4057.63,1.5062],[4108.142,1.5384],[4159.283,1.5706],[4211.061,1.6031],[4263.483,1.6358],[4316.559,1.6688],[4370.294,1.7021],[4424.699,1.7359],[4479.781,1.7701],[4535.548,1.8045],[4592.01,1.8393],[4649.175,1.8744],[4707.051,1.9097],[4765.648,1.9451],[4824.975,1.9805],[4885.039,2.0158],[4945.852,2.051],[5007.421,2.0861],[5069.757,2.121],[5132.87,2.1553],[5196.768,2.1887],[5261.46,2.2211],[5326.959,2.2519],[5393.273,2.2807],[5460.413,2.3075],[5528.388,2.3322],[5597.209,2.3546],[5666.887,2.3748],[5737.433,2.3933],[5808.857,2.4103],[5881.169,2.4261],[5954.383,2.441],[6028.507,2.4554],[6103.555,2.4698],[6179.536,2.4846],[6256.464,2.5001],[6334.349,2.5167],[6413.204,2.5346],[6493.04,2.5541],[6573.87,2.5754],[6655.706,2.5982],[6738.562,2.6221],[6822.448,2.6462],[6907.379,2.6698],[6993.367,2.6924],[7080.426,2.7125],[7168.568,2.7283],[7257.808,2.7379],[7348.158,2.7394],[7439.633,2.732],[7532.248,2.7149],[7626.015,2.689],[7720.949,2.6576],[7817.065,2.6234],[7914.377,2.588],[8012.901,2.5516],[8112.652,2.5138],[8213.645,2.4735],[8315.894,2.4292],[8419.416,2.3801],[8524.228,2.3267],[8630.343,2.269],[8737.78,2.2077],[8846.555,2.1448],[8956.683,2.0816],[9068.182,2.0187],[9181.069,1.9564],[9295.362,1.8953],[9411.078,1.8348],[9528.233,1.7744],[9646.849,1.7133],[9766.939,1.6509],[9888.525,1.5867],[10011.625,1.5203],[10136.257,1.4515],[10262.44,1.3803],[10390.195,1.3066],[10519.54,1.2305],[10650.495,1.1521],[10783.08,1.0718],[10917.316,0.9893],[11053.223,0.9049],[11190.821,0.8191],[11330.133,0.7325],[11471.179,0.6455],[11613.98,0.5585],[11758.561,0.4731],[11904.939,0.3917],[12053.141,0.3158],[12203.188,0.247],[12355.102,0.1858],[12508.907,0.1323],[12664.627,0.0855],[12822.286,0.0422],[12981.907,-0.0004],[13143.516,-0.0436],[13307.136,-0.0877],[13472.793,-0.1323],[13640.512,-0.1763],[13810.319,-0.2185],[13982.24,-0.2579],[14156.302,-0.2948],[14332.529,-0.3283],[14510.951,-0.3592],[14691.595,-0.3888],[14874.486,-0.4179],[15059.655,-0.4472],[15247.129,-0.4769],[15436.937,-0.507],[15629.106,-0.5374],[15823.669,-0.5676],[16020.654,-0.5971],[16220.091,-0.6254],[16422.01,-0.6525],[16626.443,-0.678],[16833.422,-0.7022],[17042.977,-0.725],[17255.141,-0.7458],[17469.945,-0.7638],[17687.424,-0.7798],[17907.609,-0.7895],[18130.537,-0.7995],[18356.24,-0.8096],[18584.752,-0.8203],[18816.107,-0.8315],[19050.346,-0.8432],[19287.498,-0.8552],[19527.604,-0.868],[19770.697,-0.8824],[20016.816,-0.898]];
+const EXAMPLE = [77.93, 78.17, 77.8, 77.35, 77.15, 77.22, 76.81, 75.77, 73.86, 72.43, 71.7, 70.83, 69.13, 68.18, 70.41, 72.09, 71.53, 70.36, 72.89, 76.41, 78.87, 79.24, 79.02, 79.2, 79.03, 78.94, 78.08, 77.11, 77.04, 77.29, 77.86, 78.16, 78.29, 78.6, 77.61, 74.96, 72.36, 75.82, 77.88, 79.0, 80.07, 81.52, 82.27, 81.42, 79.14, 77.39, 77.44, 78.71, 78.88, 77.9, 76.22, 73.97, 72.88, 73.29, 73.2, 70.86, 68.33, 68.87, 70.01, 71.6, 72.13, 70.47, 67.4, 64.75, 67.06, 69.27, 68.41, 63.81, 58.19, 69.22, 73.66, 74.21, 72.44, 69.75, 67.65, 69.64, 70.84, 75.19, 76.13, 73.01, 70.96, 73.18, 73.69, 72.83, 72.48, 71.04, 70.51, 71.22, 69.13, 69.14, 71.7, 71.42, 69.6, 67.88, 65.86, 65.12, 66.92, 66.86, 63.72, 65.38, 65.39, 62.36, 64.36, 63.51, 69.02, 69.26, 63.22, 64.48, 63.41, 64.75, 66.78, 66.33, 68.18, 69.14, 68.99, 69.15, 70.21, 71.82, 71.13, 72.34, 72.15, 70.95, 71.23, 67.25, 67.43, 69.05, 70.05, 68.69, 66.08, 67.9, 68.67, 69.87, 69.56, 69.59, 69.6, 69.31, 68.52, 69.04, 68.42, 69.59, 70.7, 67.32, 64.5, 65.76, 66.04, 65.71, 63.45, 64.18, 65.74, 65.93, 65.92, 65.03, 66.04, 66.33, 64.76, 65.37, 67.48, 67.84, 66.64, 65.35, 65.1, 65.27, 64.8, 64.09, 64.39, 65.5, 68.1, 67.64, 65.13, 66.48, 65.97, 64.38, 65.25, 66.45, 66.17, 66.19, 66.41, 64.26, 62.9, 64.21, 66.19, 68.01, 67.37, 65.59, 63.62, 64.67, 66.66, 65.51, 63.42, 63.84, 64.32, 65.41, 65.46, 65.1, 65.73, 66.15, 64.66, 64.25, 66.96, 66.12, 62.69, 65.72, 66.92, 65.13, 65.45, 67.22, 66.5, 65.39, 65.76, 64.3, 63.97, 64.61, 66.45, 66.04, 66.17, 66.74, 65.75, 66.22, 66.76, 66.33, 64.47, 64.02, 65.09, 65.53, 65.34, 65.9, 65.4, 64.98, 65.01, 63.43, 62.59, 62.94, 63.17, 63.2, 62.8, 62.86, 62.93, 61.52, 61.76, 62.41];   // 1/24-octave grid from 20 Hz, dB, already calibrated (REW)
+const FS_EQ = 48000;           // phone EQ apps run at 48 kHz
+const SWEEP = {f1: 18, f2: 20000, T: 8, pre: 0.5, post: 2.0, amp: 0.5};
+const FINE_N = 957, FINE = Float64Array.from({length: FINE_N}, (_, i) => 20 * 2 ** (i / 96));
+const GRID_N = 240, GRID = Float64Array.from({length: GRID_N}, (_, i) => 20 * 2 ** (i / 24));
+const PRESETS = {
+  car:  {lo: 20, hi: 300, rLo: 300, rHi: 1000, lift: 6, nF: 6, qMax: 5, boost: 0},
+  room: {lo: 18, hi: 140, rLo: 150, rHi: 300, lift: 2, nF: 6, qMax: 5, boost: 0},
+};
+const KEY = "joshs-eq-pocket.v1";
+const $ = (id) => document.getElementById(id);
+
+const state = {
+  positions: [],   // {name, fine: [dB on FINE], peak, snr}
+  settings: {...PRESETS.car, smooth: 0.1667, win: 300},
+  filters: [], fmt: "apo",
+};
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (s && Array.isArray(s.positions)) { state.positions = s.positions; Object.assign(state.settings, s.settings || {}); }
+  } catch (e) { /* storage blocked: start fresh */ }
+  if (!state.positions.length) Object.assign(state.settings, PRESETS.room);   // example data is a room
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify({positions: state.positions, settings: state.settings})); } catch (e) {}
+}
+
+// ---------- math helpers ----------
+function fft(re, im, inverse) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const half = len >> 1, ang = (inverse ? 2 : -2) * Math.PI / len;
+    const wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < half; k++) {
+        const a = i + k, b = a + half;
+        const xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+        const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+      }
+    }
+  }
+  if (inverse) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+}
+const pow2 = (n) => { let p = 1; while (p < n) p <<= 1; return p; };
+function interpLog(xs, ys, x) {           // xs ascending, linear in log f
+  if (x <= xs[0]) return ys[0];
+  if (x >= xs[xs.length - 1]) return ys[ys.length - 1];
+  let lo = 0, hi = xs.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (xs[m] <= x) lo = m; else hi = m; }
+  const t = Math.log(x / xs[lo]) / Math.log(xs[hi] / xs[lo]);
+  return ys[lo] + t * (ys[hi] - ys[lo]);
+}
+const CAL_F = CAL.map((r) => r[0]), CAL_DB = CAL.map((r) => r[1]);
+const calAt = (f) => interpLog(CAL_F, CAL_DB, f);
+
+// ---------- sweep ----------
+function makeSweep(fs) {
+  const {f1, f2, T, pre, post, amp} = SWEEP;
+  const n = Math.round(T * fs), L = Math.log(f2 / f1);
+  const sig = new Float32Array(n);
+  const fadeIn = Math.round(0.05 * fs), fadeOut = Math.round(0.01 * fs);
+  for (let i = 0; i < n; i++) {
+    const t = i / fs;
+    let v = Math.sin(2 * Math.PI * f1 * T / L * (Math.exp(t * L / T) - 1));
+    if (i < fadeIn) v *= 0.5 - 0.5 * Math.cos(Math.PI * i / fadeIn);
+    if (i > n - fadeOut) v *= 0.5 - 0.5 * Math.cos(Math.PI * (n - i) / fadeOut);
+    sig[i] = v * amp;
+  }
+  const play = new Float32Array(Math.round((pre + T + post) * fs));
+  play.set(sig, Math.round(pre * fs));
+  return {sig, play, fs};
+}
+
+// ---------- analysis: recording -> calibrated response on FINE grid ----------
+function pickSweepRegion(rec, fs) {
+  const want = Math.round((SWEEP.T + 4) * fs);
+  if (rec.length <= want) return rec;
+  const hop = Math.round(0.1 * fs), nb = Math.floor(rec.length / hop), e = new Float64Array(nb);
+  for (let b = 0; b < nb; b++) { let s = 0; for (let i = b * hop; i < (b + 1) * hop; i++) s += rec[i] * rec[i]; e[b] = s; }
+  const w = Math.round(SWEEP.T * fs / hop);
+  let best = 0, bestS = -1, s = 0;
+  for (let b = 0; b < nb; b++) { s += e[b]; if (b >= w) s -= e[b - w]; if (b >= w - 1 && s > bestS) { bestS = s; best = b - w + 1; } }
+  const start = Math.max(0, best * hop - Math.round(1.5 * fs));
+  return rec.subarray(start, Math.min(rec.length, start + want));
+}
+
+function analyse(recIn, fs, winMs) {
+  const rec = pickSweepRegion(recIn, fs);
+  let peak = 0; for (let i = 0; i < rec.length; i++) peak = Math.max(peak, Math.abs(rec[i]));
+  const sw = makeSweep(fs);
+  const N = pow2(rec.length + sw.sig.length);
+  const rr = new Float64Array(N), ri = new Float64Array(N); rr.set(rec); fft(rr, ri, false);
+  const sr = new Float64Array(N), si = new Float64Array(N); sr.set(sw.sig); fft(sr, si, false);
+  const binHz = fs / N;
+  let mean = 0, cnt = 0;
+  for (let k = 0; k <= N / 2; k++) { const f = k * binHz; if (f >= SWEEP.f1 && f <= SWEEP.f2) { mean += sr[k] * sr[k] + si[k] * si[k]; cnt++; } }
+  mean /= cnt;
+  for (let k = 0; k < N; k++) {
+    const f = (k <= N / 2 ? k : N - k) * binHz;
+    const p = sr[k] * sr[k] + si[k] * si[k];
+    const eps = (f >= SWEEP.f1 * 0.9 && f <= SWEEP.f2) ? 1e-4 * mean : 10 * mean;
+    const a = rr[k], b = ri[k], d = p + eps;
+    rr[k] = (a * sr[k] + b * si[k]) / d;       // R * conj(S) / (|S|^2 + eps)
+    ri[k] = (b * sr[k] - a * si[k]) / d;
+  }
+  fft(rr, ri, true);
+  let p0 = 0, pv = 0;
+  for (let i = 0; i < N; i++) { const v = Math.abs(rr[i]); if (v > pv) { pv = v; p0 = i; } }
+  // noise estimate far from the peak
+  let nsum = 0, nn = Math.round(0.2 * fs);
+  for (let i = 0; i < nn; i++) { const v = rr[(p0 + Math.round(N * 0.4) + i) % N]; nsum += v * v; }
+  const snr = 20 * Math.log10(pv / Math.sqrt(nsum / nn + 1e-30));
+  // window the impulse response
+  const pre = Math.round(0.003 * fs), post = Math.round(winMs / 1000 * fs), fade = Math.round(post * 0.3);
+  const M = Math.max(65536, pow2(pre + post));
+  const hr = new Float64Array(M), hi = new Float64Array(M);
+  for (let i = -pre; i < post; i++) {
+    let w = 1;
+    if (i < 0) w = 0.5 - 0.5 * Math.cos(Math.PI * (i + pre) / pre);
+    else if (i > post - fade) w = 0.5 + 0.5 * Math.cos(Math.PI * (i - (post - fade)) / fade);
+    hr[i + pre] = rr[(p0 + i + N) % N] * w;
+  }
+  fft(hr, hi, false);
+  const bin2 = fs / M, P = new Float64Array(M / 2 + 1);
+  for (let k = 0; k <= M / 2; k++) P[k] = hr[k] * hr[k] + hi[k] * hi[k];
+  const fine = new Array(FINE_N);
+  for (let j = 0; j < FINE_N; j++) {
+    const fc = FINE[j], kLo = Math.ceil(fc * 2 ** (-1 / 192) / bin2), kHi = Math.floor(fc * 2 ** (1 / 192) / bin2);
+    let pw;
+    if (kHi - kLo >= 1) { pw = 0; for (let k = kLo; k <= kHi; k++) pw += P[k]; pw /= (kHi - kLo + 1); }
+    else { const kf = fc / bin2, k0 = Math.floor(kf), t = kf - k0; pw = P[k0] * (1 - t) + P[Math.min(k0 + 1, M / 2)] * t; }
+    fine[j] = +(10 * Math.log10(pw + 1e-30) - calAt(fc)).toFixed(2);
+  }
+  return {fine, peak: 20 * Math.log10(peak + 1e-12), snr};
+}
+
+// ---------- curves on the display grid ----------
+function smoothFine(fine, w) {
+  const out = new Float64Array(GRID_N), half = w / 2;
+  for (let g = 0; g < GRID_N; g++) {
+    const fc = GRID[g], lo = fc * 2 ** -half, hi = fc * 2 ** half;
+    let s = 0, n = 0;
+    for (let j = 0; j < FINE_N; j++) { if (FINE[j] >= lo && FINE[j] <= hi) { s += 10 ** (fine[j] / 10); n++; } }
+    out[g] = n ? 10 * Math.log10(s / n) : interpLog(FINE, fine, fc);
+  }
+  return out;
+}
+function curves() {
+  const st = state.settings;
+  if (!state.positions.length) {
+    const avg = Float64Array.from(EXAMPLE);
+    return {pos: [], avg, example: true};
+  }
+  const pos = state.positions.map((p) => smoothFine(p.fine, st.smooth));
+  const avg = new Float64Array(GRID_N);
+  for (let g = 0; g < GRID_N; g++) { let s = 0; for (const c of pos) s += c[g]; avg[g] = s / pos.length; }
+  return {pos, avg, example: false};
+}
+
+// ---------- PEQ design (port of scripts/design_peq.py) ----------
+function pkDb(f, f0, g, q) {
+  const w0 = 2 * Math.PI * f0 / FS_EQ, A = 10 ** (g / 40), al = Math.sin(w0) / (2 * q), c = Math.cos(w0);
+  const b0 = 1 + al * A, b1 = -2 * c, b2 = 1 - al * A, a0 = 1 + al / A, a1 = -2 * c, a2 = 1 - al / A;
+  const w = 2 * Math.PI * f / FS_EQ, cr = Math.cos(w), ci = -Math.sin(w), c2r = Math.cos(2 * w), c2i = -Math.sin(2 * w);
+  const nr = b0 + b1 * cr + b2 * c2r, ni = b1 * ci + b2 * c2i, dr = a0 + a1 * cr + a2 * c2r, di = a1 * ci + a2 * c2i;
+  return 10 * Math.log10((nr * nr + ni * ni) / (dr * dr + di * di));
+}
+const eqAt = (f, flts) => flts.reduce((s, x) => s + pkDb(f, x[0], x[1], x[2]), 0);
+function solve(A, b) {
+  const n = b.length;
+  for (let i = 0; i < n; i++) {
+    let m = i; for (let r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[m][i])) m = r;
+    [A[i], A[m]] = [A[m], A[i]]; [b[i], b[m]] = [b[m], b[i]];
+    const d = A[i][i] || 1e-12;
+    for (let r = i + 1; r < n; r++) { const k = A[r][i] / d; for (let c = i; c < n; c++) A[r][c] -= k * A[i][c]; b[r] -= k * b[i]; }
+  }
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) { let s = b[i]; for (let c = i + 1; c < n; c++) s -= A[i][c] * x[c]; x[i] = s / (A[i][i] || 1e-12); }
+  return x;
+}
+function design(avg, st) {
+  const sel = [];
+  for (let g = 0; g < GRID_N; g++) if (GRID[g] >= st.lo && GRID[g] <= st.hi) sel.push(g);
+  let rs = 0, rn = 0;
+  for (let g = 0; g < GRID_N; g++) if (GRID[g] >= st.rLo && GRID[g] <= st.rHi) { rs += avg[g]; rn++; }
+  const ref = rn ? rs / rn : 0;
+  const f = sel.map((g) => GRID[g]), resp = sel.map((g) => avg[g]);
+  const target = f.map((x) => ref + st.lift * Math.min(1, Math.max(0, Math.log2(120 / x) / 2)));
+  if (f.length < 3) return {filters: [], ref, f, resp, target};
+  const gHi = Math.max(0, st.boost);
+  const lb = [], ub = [];
+  const resid = (x) => {
+    const out = new Array(f.length);
+    for (let i = 0; i < f.length; i++) {
+      let e = resp[i] - target[i];
+      for (let j = 0; j < x.length; j += 3) e += pkDb(f[i], Math.exp(x[j]), x[j + 1], Math.exp(x[j + 2]));
+      out[i] = e > 0 ? e : -2 * e;
+    }
+    return out;
+  };
+  const cost = (r) => r.reduce((s, v) => s + v * v, 0);
+  const refine = (flts) => {
+    let x = [];
+    lb.length = 0; ub.length = 0;
+    for (const [f0, g, q] of flts) {
+      x.push(Math.log(f0), g, Math.log(Math.min(q, st.qMax)));
+      lb.push(Math.log(st.lo), -12, Math.log(0.7)); ub.push(Math.log(st.hi), gHi, Math.log(st.qMax));
+    }
+    const clip = (v) => v.map((t, i) => Math.min(ub[i] - 1e-9, Math.max(lb[i] + 1e-9, t)));
+    x = clip(x);
+    let r = resid(x), c = cost(r), lam = 1e-2;
+    for (let it = 0; it < 80; it++) {
+      const n = x.length, J = [];
+      for (let p = 0; p < n; p++) {
+        const h = p % 3 === 1 ? 1e-3 : 1e-4, xp = x.slice(); xp[p] += h;
+        const rp = resid(xp); J.push(rp.map((v, i) => (v - r[i]) / h));
+      }
+      const A = Array.from({length: n}, (_, a) => Array.from({length: n}, (_, b) => J[a].reduce((s, v, i) => s + v * J[b][i], 0)));
+      const g = Array.from({length: n}, (_, a) => -J[a].reduce((s, v, i) => s + v * r[i], 0));
+      for (let a = 0; a < n; a++) A[a][a] += lam * (A[a][a] + 1e-6);
+      const d = solve(A, g), xn = clip(x.map((v, i) => v + d[i]));
+      const rn2 = resid(xn), cn = cost(rn2);
+      if (cn < c) { const gain = c - cn; x = xn; r = rn2; c = cn; lam = Math.max(lam / 3, 1e-7); if (gain < 1e-6 * c) break; }
+      else { lam *= 4; if (lam > 1e8) break; }
+    }
+    const out = [];
+    for (let j = 0; j < x.length; j += 3) out.push([Math.exp(x[j]), x[j + 1], Math.exp(x[j + 2])]);
+    return out;
+  };
+  let filters = [];
+  for (let k = 0; k < st.nF; k++) {
+    let iMax = 0, iMin = 0, eMax = -1e9, eMin = 1e9;
+    for (let i = 0; i < f.length; i++) {
+      const e = resp[i] + eqAt(f[i], filters) - target[i];
+      if (e > eMax) { eMax = e; iMax = i; }
+      if (e < eMin) { eMin = e; iMin = i; }
+    }
+    if (gHi > 0 && -eMin > eMax && -eMin >= 1.5) filters.push([f[iMin], Math.min(-eMin, gHi), 2]);
+    else if (eMax >= 1) filters.push([f[iMax], -Math.min(eMax, 10), 3]);
+    else break;
+    filters = refine(filters);
+  }
+  // merge filters that ended up on the same frequency (within 1/10 octave)
+  for (let merged = true; merged && filters.length > 1;) {
+    merged = false;
+    filters.sort((a, b) => a[0] - b[0]);
+    for (let i = 0; i + 1 < filters.length; i++) {
+      const [a, b] = [filters[i], filters[i + 1]];
+      if (Math.log2(b[0] / a[0]) < 0.1 && Math.sign(a[1]) === Math.sign(b[1])) {
+        filters.splice(i, 2, [Math.sqrt(a[0] * b[0]), Math.max(-12, Math.min(gHi, a[1] + b[1])), Math.max(a[2], b[2])]);
+        filters = refine(filters); merged = true; break;
+      }
+    }
+  }
+  filters.sort((a, b) => a[0] - b[0]);
+  return {filters, ref, f, resp, target};
+}
+
+// ---------- chart ----------
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function draw(c, d) {
+  const cv = $("plot"), dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H) return;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+  const padL = 40, padR = 10, padT = 10, padB = 26, pw = W - padL - padR, ph = H - padT - padB;
+  const fx = (f) => padL + pw * Math.log(f / 20) / Math.log(1000);
+  const ref = d.ref;
+  const shown = [];
+  for (let g = 0; g < GRID_N; g++) shown.push(c.avg[g] - ref);
+  for (const p of c.pos) for (let g = 0; g < GRID_N; g++) shown.push(p[g] - ref);
+  let lo = Math.min(...shown), hi = Math.max(...shown);
+  lo = Math.max(lo, -40); hi = Math.min(hi, 30);
+  lo = Math.floor((lo - 3) / 5) * 5; hi = Math.ceil((hi + 3) / 5) * 5;
+  const fy = (v) => padT + ph * (hi - v) / (hi - lo);
+  // design range
+  x.fillStyle = css("--plot-grid");
+  x.fillRect(fx(state.settings.lo), padT, fx(state.settings.hi) - fx(state.settings.lo), ph);
+  x.strokeStyle = css("--plot-grid"); x.lineWidth = 1; x.font = "11px " + css("--mono"); x.fillStyle = css("--muted");
+  for (const f of [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]) {
+    x.beginPath(); x.moveTo(fx(f), padT); x.lineTo(fx(f), padT + ph); x.stroke();
+    x.textAlign = f === 20 ? "left" : f === 20000 ? "right" : "center";
+    x.fillText(f >= 1000 ? f / 1000 + "k" : String(f), fx(f), H - 8);
+  }
+  const step = hi - lo > 40 ? 10 : 5;
+  x.textAlign = "right";
+  for (let v = lo; v <= hi; v += step) {
+    x.beginPath(); x.moveTo(padL, fy(v)); x.lineTo(padL + pw, fy(v)); x.stroke();
+    x.fillText((v > 0 ? "+" : "") + v, padL - 6, fy(v) + 4);
+  }
+  const line = (ys, color, width, dash, fs) => {
+    x.save(); x.beginPath(); x.rect(padL, padT, pw, ph); x.clip();
+    x.strokeStyle = color; x.lineWidth = width; x.setLineDash(dash || []); x.beginPath();
+    (fs || GRID).forEach((f, i) => { const X = fx(f), Y = fy(ys[i] - ref); i ? x.lineTo(X, Y) : x.moveTo(X, Y); });
+    x.stroke(); x.restore();
+  };
+  for (const p of c.pos) line(p, css("--pos"), 1.2);
+  line(c.avg, css("--fg"), 2.2);
+  if (d.f.length) {
+    line(d.target, css("--cyan"), 1.8, [6, 5], d.f);
+    const pred = Array.from(GRID, (f, i) => c.avg[i] + eqAt(f, d.filters));
+    line(pred, css("--accent"), 2.2);
+    x.fillStyle = css("--accent");
+    for (const [f0] of d.filters) {
+      const i = Math.min(GRID_N - 1, Math.max(0, Math.round(Math.log2(f0 / 20) * 24)));
+      x.beginPath(); x.arc(fx(f0), fy(pred[i] - ref), 4, 0, 2 * Math.PI); x.fill();
+    }
+  }
+  x.fillStyle = css("--muted"); x.textAlign = "left";
+  x.fillText("dB re. reference band", padL + 6, padT + 13);
+}
+
+// ---------- export text ----------
+function exportText(fmt, flts) {
+  let maxEq = -1e9;
+  for (let g = 0; g < GRID_N; g++) maxEq = Math.max(maxEq, eqAt(GRID[g], flts));
+  const pre = maxEq > 0 ? -(maxEq + 0.1) : 0;
+  const n1 = (v) => v.toFixed(1), q2 = (v) => v.toFixed(2);
+  if (!flts.length) return "No filters: the response is already within 1 dB of the target.";
+  if (fmt === "apo") {
+    return [`Preamp: ${n1(pre)} dB`, ...flts.map((x, i) => `Filter ${i + 1}: ON PK Fc ${n1(x[0])} Hz Gain ${n1(x[1])} dB Q ${q2(x[2])}`)].join("\n");
+  }
+  if (fmt === "graphic") {
+    const fs = [];
+    for (let i = 0; i < 128; i++) { const f = Math.round(20 * 1000 ** (i / 127)); if (!fs.includes(f)) fs.push(f); }
+    return "GraphicEQ: " + fs.map((f) => `${f} ${n1(eqAt(f, flts) + pre)}`).join("; ");
+  }
+  if (fmt === "camilla") {
+    const lines = ["filters:"];
+    flts.forEach((x, i) => lines.push(`  pocket ${i + 1}:`, "    type: Biquad", "    parameters:", "      type: Peaking",
+      `      freq: ${n1(x[0])}`, `      gain: ${n1(x[1])}`, `      q: ${q2(x[2])}`));
+    if (pre < 0) lines.push("# preamp: add a Gain filter of " + n1(pre) + " dB");
+    return lines.join("\n");
+  }
+  return [`Preamp ${n1(pre)} dB`, ...flts.map((x, i) => `${i + 1}. ${n1(x[0])} Hz   ${n1(x[1])} dB   Q ${q2(x[2])}`)].join("\n");
+}
+const FMT_NOTES = {
+  apo: "Equalizer APO / AutoEq ParametricEQ format. Poweramp Equalizer, Equalizer314 and RootlessJamesDSP read it. Or type the values in by hand.",
+  graphic: "AutoEq GraphicEQ format. Wavelet imports it in its AutoEq menu. Narrow peaks come out softer than in a parametric EQ.",
+  camilla: "Paste into a CamillaDSP config and add the filters to the pipeline.",
+  list: "For EQ apps without import: enter each filter as a peaking (bell) band.",
+};
+const FILE_NAMES = {apo: "pocket_eq_ParametricEQ.txt", graphic: "pocket_eq_GraphicEQ.txt", camilla: "pocket_eq_camilladsp.txt", list: "pocket_eq_filters.txt"};
+
+// ---------- render ----------
+function render() {
+  const st = state.settings;
+  for (const [id, k] of [["fLo", "lo"], ["fHi", "hi"], ["rLo", "rLo"], ["rHi", "rHi"], ["lift", "lift"], ["nF", "nF"], ["qMax", "qMax"], ["boost", "boost"], ["win", "win"]]) {
+    if (document.activeElement !== $(id)) $(id).value = st[k];
+  }
+  $("smooth").value = String(st.smooth);
+  const c = curves(), d = design(c.avg, st);
+  state.filters = d.filters;
+  $("exampleBanner").hidden = !c.example;
+  // positions
+  const box = $("positions"); box.textContent = "";
+  state.positions.forEach((p, i) => {
+    const el = document.createElement("div"); el.className = "chip";
+    const warn = p.peak > -0.2 ? "clipped" : p.peak < -40 ? "too quiet" : p.snr < 35 ? "noisy" : "";
+    el.innerHTML = `<span>${p.name}</span><span class="q ${warn ? "warn" : ""}">${warn || "ok"} · ${p.peak.toFixed(0)} dBFS · SNR ${p.snr.toFixed(0)}</span>`;
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "Remove"; b.setAttribute("aria-label", "Remove " + p.name);
+    b.onclick = () => { state.positions.splice(i, 1); save(); render(); };
+    el.appendChild(b); box.appendChild(el);
+  });
+  if (state.positions.length > 1) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = "Clear all";
+    b.onclick = () => { if (b.dataset.armed) { state.positions = []; save(); render(); } else { b.dataset.armed = "1"; b.textContent = "Tap again to clear"; } };
+    box.appendChild(b);
+  }
+  // filters table
+  const tb = $("ftable"); tb.textContent = "";
+  if (!d.filters.length) { const tr = document.createElement("tr"); tr.innerHTML = `<td colspan="4">No filters needed in this range.</td>`; tb.appendChild(tr); }
+  d.filters.forEach((x, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${i + 1}</td><td>${x[0].toFixed(1)} Hz</td><td class="${x[1] < 0 ? "cut" : "boost"}">${x[1] > 0 ? "+" : ""}${x[1].toFixed(1)} dB</td><td>${x[2].toFixed(2)}</td>`;
+    tb.appendChild(tr);
+  });
+  if (d.f.length) {
+    const before = d.f.map((f, i) => d.resp[i] - d.target[i]), after = d.f.map((f, i) => d.resp[i] + eqAt(f, d.filters) - d.target[i]);
+    const rms = (a) => Math.sqrt(a.reduce((s, v) => s + v * v, 0) / a.length);
+    $("summary").textContent = `${st.lo}–${st.hi} Hz · peak above target ${Math.max(...before).toFixed(1)} → ${Math.max(...after).toFixed(1)} dB · deviation ${rms(before).toFixed(1)} → ${rms(after).toFixed(1)} dB rms`;
+  } else $("summary").textContent = "Set a valid range.";
+  $("out").value = exportText(state.fmt, d.filters);
+  $("fmtNote").textContent = FMT_NOTES[state.fmt];
+  for (const b of $("tabs").children) b.setAttribute("aria-selected", String(b.dataset.fmt === state.fmt));
+  draw(c, d);
+}
+
+// ---------- audio ----------
+let ctx = null;
+function audio() {
+  if (!ctx) { try { ctx = new AudioContext({sampleRate: 48000}); } catch (e) { ctx = new AudioContext(); } }
+  $("pillRate").innerHTML = `Rate: <b>${ctx.sampleRate / 1000} kHz</b>`;
+  return ctx;
+}
+function msg(text, kind) { $("msg").textContent = text; $("msg").className = "msg " + (kind || ""); }
+function playSweep(ac) {
+  const sw = makeSweep(ac.sampleRate), buf = ac.createBuffer(1, sw.play.length, ac.sampleRate);
+  buf.copyToChannel(sw.play, 0);
+  const src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination);
+  return new Promise((res) => { src.onended = res; src.start(); });
+}
+function addResult(r) {
+  const n = state.positions.length + 1;
+  state.positions.push({name: "P" + n, fine: r.fine, peak: r.peak, snr: r.snr});
+  save(); render();
+  const warn = r.peak > -0.2 ? "The recording clipped: turn the volume down and measure again."
+    : r.peak < -40 ? "The recording is very quiet: turn the volume up."
+    : r.snr < 35 ? "The result is noisy: measure in a quieter moment or a bit louder." : "";
+  msg(warn || `Position P${n} added. Move the mic and measure the next one.`, warn ? "warn" : "ok");
+}
+const busy = (on) => { for (const id of ["btnLive", "btnPlay"]) $(id).disabled = on; };
+
+$("btnPlay").onclick = async () => {
+  const ac = audio(); await ac.resume(); busy(true);
+  for (let s = 3; s > 0; s--) { msg(`Sweep starts in ${s} s. Recorder running?`); await new Promise((r) => setTimeout(r, 1000)); }
+  msg("Playing the sweep…"); await playSweep(ac);
+  msg("Done. Stop the recorder and add the WAV file.", "ok"); busy(false);
+};
+
+$("btnLive").onclick = async () => {
+  const ac = audio(); await ac.resume();
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1}});
+  } catch (e) {
+    $("liveNote").hidden = false; $("pillMic").innerHTML = "Mic: <b>blocked here</b>"; $("pillMic").className = "pill warn";
+    msg("The page can't use the microphone here. Use the recorder app path below.", "bad");
+    return;
+  }
+  const tr = stream.getAudioTracks()[0], set = tr.getSettings ? tr.getSettings() : {};
+  $("pillMic").innerHTML = `Mic: <b>${(tr.label || "live").slice(0, 22)}</b>`; $("pillMic").className = "pill ok";
+  if (set.echoCancellation || set.autoGainControl || set.noiseSuppression) msg("Warning: the phone keeps some voice processing on. Results may be off.", "warn");
+  busy(true);
+  const srcNode = ac.createMediaStreamSource(stream), proc = ac.createScriptProcessor(4096, 1, 1), mute = ac.createGain();
+  mute.gain.value = 0; const chunks = [];
+  proc.onaudioprocess = (ev) => chunks.push(new Float32Array(ev.inputBuffer.getChannelData(0)));
+  srcNode.connect(proc); proc.connect(mute); mute.connect(ac.destination);
+  msg("Measuring: keep quiet…");
+  await new Promise((r) => setTimeout(r, 300));
+  await playSweep(ac);
+  await new Promise((r) => setTimeout(r, 400));
+  proc.disconnect(); srcNode.disconnect(); stream.getTracks().forEach((t) => t.stop());
+  const len = chunks.reduce((s, c) => s + c.length, 0), rec = new Float32Array(len);
+  let o = 0; for (const c of chunks) { rec.set(c, o); o += c.length; }
+  msg("Analysing…");
+  await new Promise((r) => setTimeout(r, 30));
+  try { addResult(analyse(rec, ac.sampleRate, state.settings.win)); } catch (e) { msg("Analysis failed: " + e.message, "bad"); }
+  busy(false);
+};
+
+$("fileIn").onchange = async (ev) => {
+  const files = [...ev.target.files]; ev.target.value = "";
+  const ac = audio();
+  for (const file of files) {
+    msg(`Reading ${file.name}…`);
+    try {
+      const ab = await file.arrayBuffer(), buf = await ac.decodeAudioData(ab);
+      let ch = 0, best = -1;
+      for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); let s = 0; for (let i = 0; i < d.length; i += 7) s += d[i] * d[i]; if (s > best) { best = s; ch = c; } }
+      await new Promise((r) => setTimeout(r, 30));
+      addResult(analyse(buf.getChannelData(ch), buf.sampleRate, state.settings.win));
+    } catch (e) { msg(`Could not read ${file.name}: ${e.message || "unknown format"}. Use WAV.`, "bad"); }
+  }
+};
+
+// ---------- settings ----------
+const numFields = [["fLo", "lo"], ["fHi", "hi"], ["rLo", "rLo"], ["rHi", "rHi"], ["lift", "lift"], ["nF", "nF"], ["qMax", "qMax"], ["boost", "boost"], ["win", "win"]];
+for (const [id, k] of numFields) {
+  $(id).addEventListener("change", () => {
+    const v = parseFloat($(id).value);
+    if (!Number.isFinite(v)) return render();
+    const el = $(id), mn = parseFloat(el.min), mx = parseFloat(el.max);
+    state.settings[k] = Math.min(mx, Math.max(mn, k === "nF" ? Math.round(v) : v));
+    save(); render();
+  });
+}
+$("smooth").onchange = () => { state.settings.smooth = parseFloat($("smooth").value); save(); render(); };
+$("preCar").onclick = () => { Object.assign(state.settings, PRESETS.car); save(); render(); };
+$("preRoom").onclick = () => { Object.assign(state.settings, PRESETS.room); save(); render(); };
+for (const b of $("tabs").children) b.onclick = () => { state.fmt = b.dataset.fmt; render(); };
+
+// ---------- export actions ----------
+$("btnCopy").onclick = () => {
+  const t = $("out").value;
+  const done = () => { $("msgOut").textContent = "Copied."; $("msgOut").className = "msg ok"; };
+  try {
+    navigator.clipboard.writeText(t).then(done, () => { $("out").select(); $("msgOut").textContent = "Text selected: copy it with the menu."; });
+  } catch (e) { $("out").select(); }
+};
+let downloads = null;
+$("btnSave").onclick = async () => {
+  const name = FILE_NAMES[state.fmt], text = $("out").value;
+  if (downloads) {
+    try { await downloads.save({filename: name, data: text}); $("msgOut").textContent = "Saved."; $("msgOut").className = "msg ok"; }
+    catch (e) { $("msgOut").textContent = e.code === "declined" ? "Not saved." : "Saving is not available here: use Copy."; $("msgOut").className = "msg"; }
+    return;
+  }
+  if (!window.claude) {     // own HTTPS host: a normal download link works
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], {type: "text/plain"})); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } else { $("msgOut").textContent = "Saving is not available here: use Copy."; }
+};
+
+// ---------- start ----------
+load();
+$("pillMic").innerHTML = navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? "Mic: <b>tap Measure</b>" : "Mic: <b>WAV only</b>";
+render();
+window.addEventListener("resize", () => render());
+if (window.claude && window.claude.use) window.claude.use("downloads").then((d) => { downloads = d; if (!d) $("btnSave").hidden = true; }, () => { $("btnSave").hidden = true; });
+</script>
