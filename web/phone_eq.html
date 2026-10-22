@@ -116,7 +116,8 @@ details p,details ul{margin:.5em 0}
       <ol class="steps">
         <li>Plug the <b>UMIK-1</b> into the phone. Set the car stereo to a normal listening level.</li>
         <li>Put the mic where your head is, pointing at the roof.</li>
-        <li><b>Live:</b> tap <b>Measure</b>. <b>Recorder app:</b> start recording, tap <b>Play sweep</b>, stop, then add the WAV.</li>
+        <li>Engine off (ignition on), fan off, doors closed.</li>
+        <li><b>Live:</b> tap <b>Measure</b>. <b>Recorder app:</b> start recording, tap <b>Play sweep</b>, wait for <b>Done</b> (about 14 s), stop, then add the WAV.</li>
         <li>Move the mic 10–20 cm and repeat. 5–7 positions is good.</li>
       </ol>
       <div class="row">
@@ -285,6 +286,30 @@ function pickSweepRegion(rec, fs) {
   return rec.subarray(start, Math.min(rec.length, start + want));
 }
 
+// Is the whole sweep in the recording? p0 = where the sweep starts (impulse peak).
+// At each checkpoint the band around the sweep frequency must be 6 dB above the silence before/after it.
+function checkSweep(rec, fs, p0) {
+  const L = Math.log(SWEEP.f2 / SWEEP.f1), n = 4096;
+  const bandDb = (start, f) => {
+    if (start < 0 || start + n > rec.length) return null;
+    const re = new Float64Array(n), im = new Float64Array(n);
+    for (let i = 0; i < n; i++) re[i] = rec[start + i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / (n - 1)));
+    fft(re, im, false);
+    const half = Math.max(0.18 * f, 2.5 * fs / n);
+    let s = 0;
+    for (let k = 0; k <= n / 2; k++) { const fk = k * fs / n; if (Math.abs(fk - f) <= half) s += re[k] * re[k] + im[k] * im[k]; }
+    return 10 * Math.log10(s + 1e-30);
+  };
+  for (const t of [0.5, 2.5, 4.5, 6.5, 7.6]) {
+    const f = SWEEP.f1 * Math.exp(t * L / SWEEP.T);
+    const sig = bandDb(p0 + Math.round(t * fs) - n / 2, f);
+    let ref = bandDb(p0 - Math.round(1.0 * fs), f);
+    if (ref === null) ref = bandDb(p0 + Math.round((SWEEP.T + 1.0) * fs), f);
+    if (sig === null || ref === null || sig - ref < 6) return f;
+  }
+  return null;
+}
+
 function analyse(recIn, fs, winMs) {
   const rec = pickSweepRegion(recIn, fs);
   let peak = 0; for (let i = 0; i < rec.length; i++) peak = Math.max(peak, Math.abs(rec[i]));
@@ -307,6 +332,7 @@ function analyse(recIn, fs, winMs) {
   fft(rr, ri, true);
   let p0 = 0, pv = 0;
   for (let i = 0; i < N; i++) { const v = Math.abs(rr[i]); if (v > pv) { pv = v; p0 = i; } }
+  const missing = checkSweep(rec, fs, p0);
   // noise estimate far from the peak
   let nsum = 0, nn = Math.round(0.2 * fs);
   for (let i = 0; i < nn; i++) { const v = rr[(p0 + Math.round(N * 0.4) + i) % N]; nsum += v * v; }
@@ -332,7 +358,7 @@ function analyse(recIn, fs, winMs) {
     else { const kf = fc / bin2, k0 = Math.floor(kf), t = kf - k0; pw = P[k0] * (1 - t) + P[Math.min(k0 + 1, M / 2)] * t; }
     fine[j] = +(10 * Math.log10(pw + 1e-30) - calAt(fc)).toFixed(2);
   }
-  return {fine, peak: 20 * Math.log10(peak + 1e-12), snr};
+  return {fine, peak: 20 * Math.log10(peak + 1e-12), snr, missing};
 }
 
 // ---------- curves on the display grid ----------
@@ -606,7 +632,11 @@ function playSweep(ac) {
   const src = ac.createBufferSource(); src.buffer = buf; src.connect(ac.destination);
   return new Promise((res) => { src.onended = res; src.start(); });
 }
-function addResult(r) {
+function addResult(r, label) {
+  if (r.missing !== null) {
+    msg(`${label ? label + ": " : ""}not added. The full sweep is not in this recording. Keep the recorder running until the page says "Done", and turn the volume up if the sweep is hard to hear.`, "bad");
+    return false;
+  }
   const n = state.positions.length + 1;
   state.positions.push({name: "P" + n, fine: r.fine, peak: r.peak, snr: r.snr});
   save(); render();
@@ -614,14 +644,20 @@ function addResult(r) {
     : r.peak < -40 ? "The recording is very quiet: turn the volume up."
     : r.snr < 35 ? "The result is noisy: measure in a quieter moment or a bit louder." : "";
   msg(warn || `Position P${n} added. Move the mic and measure the next one.`, warn ? "warn" : "ok");
+  return true;
 }
 const busy = (on) => { for (const id of ["btnLive", "btnPlay"]) $(id).disabled = on; };
 
 $("btnPlay").onclick = async () => {
   const ac = audio(); await ac.resume(); busy(true);
   for (let s = 3; s > 0; s--) { msg(`Sweep starts in ${s} s. Recorder running?`); await new Promise((r) => setTimeout(r, 1000)); }
-  msg("Playing the sweep…"); await playSweep(ac);
-  msg("Done. Stop the recorder and add the WAV file.", "ok"); busy(false);
+  const total = Math.ceil(SWEEP.pre + SWEEP.T + SWEEP.post);
+  let left = total;
+  msg(`Sweep playing: ${left} s left. Keep recording, stay on this page.`, "warn");
+  const tick = setInterval(() => { left = Math.max(0, left - 1); msg(`Sweep playing: ${left} s left. Keep recording, stay on this page.`, "warn"); }, 1000);
+  await playSweep(ac);
+  clearInterval(tick);
+  msg("Done. Now stop the recorder and add the WAV file.", "ok"); busy(false);
 };
 
 $("btnLive").onclick = async () => {
@@ -665,7 +701,7 @@ $("fileIn").onchange = async (ev) => {
       let ch = 0, best = -1;
       for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); let s = 0; for (let i = 0; i < d.length; i += 7) s += d[i] * d[i]; if (s > best) { best = s; ch = c; } }
       await new Promise((r) => setTimeout(r, 30));
-      addResult(analyse(buf.getChannelData(ch), buf.sampleRate, state.settings.win));
+      addResult(analyse(buf.getChannelData(ch), buf.sampleRate, state.settings.win), file.name);
     } catch (e) { msg(`Could not read ${file.name}: ${e.message || "unknown format"}. Use WAV.`, "bad"); }
   }
 };

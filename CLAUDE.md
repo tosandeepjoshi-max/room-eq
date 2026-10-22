@@ -47,6 +47,22 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
 - REW filter export goes into a new preset (e.g. `rew_v1.yml`) next to
   `room_eq.yml`, with the preamp covering the largest boost.
 
+## Josh's EQ Pocket: phone measurement page (2026-10-19)
+
+- `web/phone_eq.html`, published as a private Artifact:
+  https://claude.ai/artifact/V94Xsx2MX7YdWrJaj4FXBM (republish the same file path to update).
+- Plays an 8 s log sweep (18 Hz-20 kHz, 0.5 s before, 2 s after), analyses WAV recordings
+  (deconvolution, 300 ms IR window, UMIK-1 7079072 calibration built in), averages positions and
+  fits PEQ filters with a JS port of `design_peq.py`. Exports APO/AutoEq text (Poweramp EQ),
+  Wavelet GraphicEQ (Wavelet's fixed 127 frequencies only), CamillaDSP, plain list.
+- Artifact pages cannot use the microphone: record with a recorder app (USB Audio Recorder PRO
+  or similar, WAV 48 kHz) and add the file. "Save measurements" moves data to the PC as JSON.
+- PC check: `scripts/pocket_analyse.py <folder of WAVs>` does the same analysis and writes
+  REW-style text files plus `average.txt` for `design_peq.py`. Both reject a recording where
+  the full sweep is missing.
+- 2026-10-21 car test: all 3 recordings unusable. The recorder was stopped before the sweep
+  ended (sweep cut near 350 and 900 Hz, one with no sweep), with loud low-frequency car noise.
+
 ## Speaker chirp from the display (2026-10-05)
 
 A faint chirp/beep in the KEF stops when the backlight is off (brightness 0)
