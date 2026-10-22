@@ -154,6 +154,8 @@ def main():
     ap.add_argument("--win", type=float, default=300)
     ap.add_argument("--out")
     ap.add_argument("--png")
+    ap.add_argument("--force", action="store_true",
+                    help="keep recordings with an incomplete sweep (only the covered low band is valid)")
     a = ap.parse_args()
 
     wavs = []
@@ -167,7 +169,9 @@ def main():
     for w in wavs:
         rec, fs, ch = read_wav(w)
         db, peak, snr, missing = analyse(rec, fs, a.win, cal_f, cal_db)
-        if missing is not None:
+        if missing is not None and a.force:
+            print(f"{w.name}: incomplete sweep (first failed check at {missing:.0f} Hz), kept because of --force")
+        elif missing is not None:
             print(f"{w.name}: SKIPPED, the sweep is incomplete or missing (first failed check at "
                   f"{missing:.0f} Hz): the recording stopped early, or the sweep was too quiet")
             continue

@@ -101,6 +101,18 @@ def main():
             break
         filters.append((float(f[i]), -float(min(err[i], 10)), 3.0))
         filters = refine(f, resp, target, filters, a.lo, a.hi, a.q_max)
+    # Merge filters that ended up on the same frequency (within 1/10 octave), as the phone page does.
+    merged = True
+    while merged and len(filters) > 1:
+        merged = False
+        filters = sorted(filters)
+        for i in range(len(filters) - 1):
+            (f1, g1, q1), (f2, g2, q2) = filters[i], filters[i + 1]
+            if np.log2(f2 / f1) < 0.1:
+                filters[i:i + 2] = [(float(np.sqrt(f1 * f2)), max(-12.0, g1 + g2), max(q1, q2))]
+                filters = refine(f, resp, target, filters, a.lo, a.hi, a.q_max)
+                merged = True
+                break
     filters = sorted(filters)
 
     before = resp - target
