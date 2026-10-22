@@ -212,6 +212,13 @@ Screen sleep and brightness (2026-10-03):
   screen to sleep disconnects, the server turns the backlight back on.
 
 How it works:
+- CamillaDSP client fix (2026-10-22): a call cancelled after sending (the
+  debounced apply while dragging a fader) left its reply unread, so every later
+  call read the previous call's answer until a server restart. Status fields
+  came out shuffled, and `auto_recover` never saw `Inactive`, so the audio
+  stayed off after a KEF USB dropout until a manual Reconnect. `Camilla.call`
+  now skips replies whose key is not its command, and drops the connection
+  when cancelled.
 - The server talks to CamillaDSP's websocket on 1234 and serves the page and a
   websocket at `/ws` for the screens. It pushes `state`, `levels` (~14/s),
   `status` (1/s: state, load, capture rate, clipped, rate adjust, CPU temp),

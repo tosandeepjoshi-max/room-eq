@@ -156,11 +156,23 @@ class Camilla:
                     if self.ws is None or self.ws.closed:
                         await self._connect()
                     await self.ws.send_str(json.dumps(msg))
-                    reply = await asyncio.wait_for(self.ws.receive(), timeout=3)
-                    if reply.type != WSMsgType.TEXT:
-                        raise ConnectionError("connection closed")
-                    data = json.loads(reply.data)
+                    # Each reply is keyed by its command. Skip replies left over from a call that
+                    # was cancelled before it read its reply (e.g. a debounced apply); otherwise every
+                    # later call would read the previous call's answer.
+                    while True:
+                        reply = await asyncio.wait_for(self.ws.receive(), timeout=3)
+                        if reply.type != WSMsgType.TEXT:
+                            raise ConnectionError("connection closed")
+                        data = json.loads(reply.data)
+                        if next(iter(data), None) in (command, "Invalid"):
+                            break
                     break
+                except asyncio.CancelledError:
+                    # Our reply may still arrive; drop the connection so nobody reads it.
+                    if self.ws is not None:
+                        asyncio.ensure_future(self.ws.close())
+                    self.ws = None
+                    raise
                 except (OSError, ConnectionError, asyncio.TimeoutError, Exception) as exc:
                     if self.ws is not None:
                         await self.ws.close()

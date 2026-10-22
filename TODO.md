@@ -20,6 +20,8 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Overlay on again 2026-10-16. Splash and disable_splash checked by the user on boot.
 - [x] Every start/restart uses the scheduled mode for the time of day (2026-10-16).
 - [x] Save the startup-mode fix on the SD card: saved 2026-10-16; overlay on, real reboot at 01:22 started in Vocal.
+- [x] Fix: audio not restarting after a KEF dropout (CamillaDSP replies out of step, auto-recover blind). Deployed to RAM 2026-10-22.
+- [ ] User: turn the overlay off so the CamillaDSP reply fix can be saved on the SD card, then on again #you
 - [x] Set up Restart Shield on the Pi: adb installed, key accepted on the Shield, `shield_mac` saved, code on the SD card; real restart tested 2026-10-16 (Shield back in ~45 s, key still accepted).
 
 - [x] 1. Compact layout on the 800 x 480 screen: done 2026-10-03 (new fader
