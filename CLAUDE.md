@@ -60,8 +60,13 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
 - PC check: `scripts/pocket_analyse.py <folder of WAVs>` does the same analysis and writes
   REW-style text files plus `average.txt` for `design_peq.py`. Both reject a recording where
   the full sweep is missing.
-- 2026-10-21 car test: all 3 recordings unusable. The recorder was stopped before the sweep
-  ended (sweep cut near 350 and 900 Hz, one with no sweep), with loud low-frequency car noise.
+- 2026-10-21/22 car tests: no recording held a full sweep. The user stayed on the page until
+  "Done"; the files are short and the sweep ends at a splice click 1-2 s before the end, so the
+  recorder app pauses in the background (no foreground service). Fix: keep the recorder in front
+  and play `web/pocket_sweep_48k.wav` (3 s silence + the page's sweep, made by
+  `pocket_analyse.py --write-sweep`) from a car USB stick or a music player.
+- car_bass_v1 (2026-10-22, 5 positions, bass part only, 30-250 Hz, +6 dB lift): 42 Hz -3 Q 6,
+  50 Hz -3 Q 3.5, 66 Hz -3 Q 4. Files in `measurements/2026-10-22_car/partial/`.
 
 ## Speaker chirp from the display (2026-10-05)
 
