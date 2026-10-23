@@ -52,7 +52,9 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
 - `web/phone_eq.html`, published as a private Artifact:
   https://claude.ai/artifact/V94Xsx2MX7YdWrJaj4FXBM (republish the same file path to update).
 - Plays an 8 s log sweep (18 Hz-20 kHz, 0.5 s before, 2 s after), analyses WAV recordings
-  (deconvolution, 300 ms IR window, UMIK-1 7079072 calibration built in), averages positions and
+  (deconvolution, 300 ms IR window, UMIK-1 7079072 calibration built in: "Mic points" switch,
+  90 degrees = up at the roof (default) or 0 degrees = at the speakers; switching re-bases stored
+  positions; `pocket_analyse.py` also defaults to 90 degrees), averages positions and
   fits PEQ filters with a JS port of `design_peq.py`. Exports APO/AutoEq text (Poweramp EQ),
   Wavelet GraphicEQ (Wavelet's fixed 127 frequencies only), CamillaDSP, plain list.
 - Artifact pages cannot use the microphone: record with a recorder app (USB Audio Recorder PRO
