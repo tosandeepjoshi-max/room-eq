@@ -64,7 +64,9 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
   "Done"; the files are short and the sweep ends at a splice click 1-2 s before the end, so the
   recorder app pauses in the background (no foreground service). Confirmed 2026-10-23 by the user:
   USB Audio Recorder PRO records about 12 s after it leaves the screen, then pauses, also after
-  a quick switch back. Its Output (monitor) was set to 8000 Hz: set 48000 Hz, MON off. Fix: keep the recorder in front
+  a quick switch back. Its Output (monitor) was set to 8000 Hz: set 48000 Hz, MON off.
+  Working method (user, 2026-10-23): recorder and the page in Android split screen, so neither
+  pauses; the page's Play sweep then works. Fallback: keep the recorder in front
   and play `web/pocket_sweep_48k.wav` (3 s silence + the page's sweep, made by
   `pocket_analyse.py --write-sweep`) from a car USB stick or a music player.
 - car_bass_v1 (2026-10-22, 5 positions, bass part only, 30-250 Hz, +6 dB lift): 42 Hz -3 Q 6,
