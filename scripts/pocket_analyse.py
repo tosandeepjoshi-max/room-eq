@@ -151,7 +151,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("inputs", nargs="*")
     ap.add_argument("--write-sweep", metavar="WAV",
-                    help="write the page's sweep (3 s silence, sweep, 2 s silence) as a 48 kHz WAV and exit")
+                    help="write the page's sweep (1 s silence, sweep, 2 s silence) as a 48 kHz WAV and exit")
     ap.add_argument("--cal", default="measurements/umik1/7079072.txt")
     ap.add_argument("--win", type=float, default=300)
     ap.add_argument("--out")
@@ -162,7 +162,7 @@ def main():
 
     if a.write_sweep:
         fs = 48000
-        sig = np.concatenate([np.zeros(3 * fs), make_sweep(fs), np.zeros(2 * fs)])
+        sig = np.concatenate([np.zeros(1 * fs), make_sweep(fs), np.zeros(2 * fs)])
         pcm = np.round(np.clip(sig, -1, 1) * 32767).astype("<i2")
         with wave.open(a.write_sweep, "wb") as w:
             w.setnchannels(2)

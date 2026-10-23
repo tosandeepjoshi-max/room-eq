@@ -117,7 +117,7 @@ details p,details ul{margin:.5em 0}
         <li>Plug the <b>UMIK-1</b> into the phone. Set the car stereo to a normal listening level.</li>
         <li>Put the mic where your head is, pointing at the roof.</li>
         <li>Engine off (ignition on), fan off, doors closed.</li>
-        <li><b>Live:</b> tap <b>Measure</b>. <b>Recorder app:</b> most recorders pause in the background, so open the recorder and this page in <b>split screen</b>. Start recording, tap <b>Play sweep</b>, wait for <b>Done</b>, stop, then add the WAV. Without split screen, play <b>pocket_sweep_48k.wav</b> from a car USB stick or a music player while the recorder stays in front.</li>
+        <li><b>Live:</b> tap <b>Measure</b>. <b>Recorder app:</b> most recorders pause in the background, so open the recorder and this page in <b>split screen</b>. Start recording, tap <b>Play sweep</b> straight away (the sweep ends 9.5 s later, so it fits recorders that stop at 12 s), wait for <b>Done</b>, stop, then add the WAV. Without split screen, play <b>pocket_sweep_48k.wav</b> from a car USB stick or a music player while the recorder stays in front.</li>
         <li>Move the mic 10–20 cm and repeat. 5–7 positions is good.</li>
       </ol>
       <div class="row">
@@ -701,7 +701,7 @@ function addResult(r, label) {
 const busy = (on) => { for (const id of ["btnLive", "btnPlay"]) $(id).disabled = on; };
 
 $("btnPlay").onclick = async () => {
-  const LEAD = 3;
+  const LEAD = 1;     // short: some recorder apps stop after about 12 s, and the sweep ends 9.5 s after the tap
   busy(true);
   let tick = null;
   try {
