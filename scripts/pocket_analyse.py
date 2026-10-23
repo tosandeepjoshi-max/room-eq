@@ -149,7 +149,9 @@ def write_txt(path, f, db, note):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("inputs", nargs="+")
+    ap.add_argument("inputs", nargs="*")
+    ap.add_argument("--write-sweep", metavar="WAV",
+                    help="write the page's sweep (3 s silence, sweep, 2 s silence) as a 48 kHz WAV and exit")
     ap.add_argument("--cal", default="measurements/umik1/7079072.txt")
     ap.add_argument("--win", type=float, default=300)
     ap.add_argument("--out")
@@ -157,6 +159,20 @@ def main():
     ap.add_argument("--force", action="store_true",
                     help="keep recordings with an incomplete sweep (only the covered low band is valid)")
     a = ap.parse_args()
+
+    if a.write_sweep:
+        fs = 48000
+        sig = np.concatenate([np.zeros(3 * fs), make_sweep(fs), np.zeros(2 * fs)])
+        pcm = np.round(np.clip(sig, -1, 1) * 32767).astype("<i2")
+        with wave.open(a.write_sweep, "wb") as w:
+            w.setnchannels(2)
+            w.setsampwidth(2)
+            w.setframerate(fs)
+            w.writeframes(np.repeat(pcm, 2).tobytes())
+        print(f"wrote {a.write_sweep} ({len(sig) / fs:.1f} s, 48 kHz stereo)")
+        return
+    if not a.inputs:
+        ap.error("give WAV files or a folder")
 
     wavs = []
     for i in a.inputs:
