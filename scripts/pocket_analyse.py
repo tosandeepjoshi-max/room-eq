@@ -62,7 +62,7 @@ def pick_region(rec, fs):
     return rec[start:start + want]
 
 
-CHECK_T = (0.5, 2.5, 4.5, 6.5, 7.6)        # seconds into the sweep
+CHECK_T = (0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.6)        # seconds into the sweep
 
 
 def check_sweep(rec, fs, p0):
@@ -88,7 +88,9 @@ def check_sweep(rec, fs, p0):
         ref = band_db(p0 - round(1.0 * fs), f)
         if ref is None:
             ref = band_db(p0 + round((SWEEP["T"] + 1.0) * fs), f)
-        if sig is None or ref is None or sig - ref < 6:
+        # Only the core band rejects a file, as on the phone page: weak deep bass (car speakers)
+        # or weak treble does not make the rest of the measurement wrong.
+        if (sig is None or ref is None or sig - ref < 6) and 50 <= f <= 2500:
             return False, f
     return True, None
 
