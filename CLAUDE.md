@@ -71,6 +71,15 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
   pauses; the page's Play sweep then works. Fallback: keep the recorder in front
   and play `web/pocket_sweep_48k.wav` (3 s silence + the page's sweep, made by
   `pocket_analyse.py --write-sweep`) from a car USB stick or a music player.
+- Phone over wireless adb (2026-10-23): platform-tools installed with winget; phone vivo V2562
+  paired (guid `adb-10AG5L1NLF002QS`; the Shield also shows in `adb mdns services`, never use
+  it). `scripts/phone.py status | push <files> --to Download/x | pull-recordings YYYY_MM_DD`.
+  Recordings: `/sdcard/Documents/USBAudioRecorderPRO/Recordings/`.
+- car_v1 (2026-10-23, 5 full sweeps): `scripts/design_full.py` (target = 500 Hz-2 kHz level +
+  bass shelf below 60 Hz + -1 dB/oct above 2 kHz; 4 kHz high shelf + cut-only PEQs).
+  Versions normal (+8 dB bass), gentle (+11), bass (+14) in `measurements/2026-10-23_car/`,
+  pushed to the phone's `Download/car_eq_wavelet/`. Car: +15 dB at 40-70 Hz, +10 dB at
+  150-250 Hz, treble 5-6 dB low.
 - car_bass_v1 (2026-10-22, 5 positions, bass part only, 30-250 Hz, +6 dB lift): 42 Hz -3 Q 6,
   50 Hz -3 Q 3.5, 66 Hz -3 Q 4. Files in `measurements/2026-10-22_car/partial/`.
 
