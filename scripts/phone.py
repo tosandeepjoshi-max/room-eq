@@ -84,7 +84,12 @@ def main():
         run("-s", s, "shell", "mkdir", "-p", dest)
         for f in a.files:
             run("-s", s, "push", f, dest + "/")
+            # Files pushed over adb stay invisible to file pickers until the media scanner indexes them.
+            run("-s", s, "shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+                "-d", f"file://{dest}/{Path(f).name}", check=False)
             print(f"pushed {f} -> {dest}/")
+        run("-s", s, "shell", "content", "call", "--method", "scan_volume", "--uri", "content://media",
+            "--arg", "external_primary", check=False)
     else:
         names = [n for n in run("-s", s, "shell", f"ls {REC_DIR}").split() if n.startswith(f"Record_{a.date}")]
         if not names:
