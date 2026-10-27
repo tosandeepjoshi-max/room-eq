@@ -9,6 +9,9 @@ Paused 2026-10-03. Next: miniDSP flash backup when the CH341A arrives; the
 user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 
 - [ ] miniDSP flash backup when the CH341A arrives (see CLAUDE.md, "miniDSP 2x4 HD / DDRC-24").
+- [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
+- [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
+- [ ] Bring the sub range down ~5-6 dB (sub knob or low shelf), then a second filter round for 37/46 Hz; try sub phase against the 105 Hz null.
 - [ ] Pi heatsink and closed case (watch CPU temp, ~56 C open).
 - [x] Phone EQ page: sweep + UMIK-1 measurement and PEQ design in Chrome on Android (car tuning), exports for Poweramp EQ / Equalizer314 / Wavelet / CamillaDSP. Source `web/phone_eq.html`. Published: https://claude.ai/artifact/V94Xsx2MX7YdWrJaj4FXBM
 - [x] User: first real measurement with the phone, a recorder app and the UMIK-1 (car): done 2026-10-23 (split screen, 5 full sweeps); car_v1 normal/gentle/bass pushed to the phone.

@@ -83,6 +83,24 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
 - car_bass_v1 (2026-10-22, 5 positions, bass part only, 30-250 Hz, +6 dB lift): 42 Hz -3 Q 6,
   50 Hz -3 Q 3.5, 66 Hz -3 Q 4. Files in `measurements/2026-10-22_car/partial/`.
 
+## Room check from the Pi (2026-10-27)
+
+- `scripts/pi_sweep.py` runs on the Pi with the UMIK-1 on a Pi USB port: switches the UI to each mode,
+  swaps CamillaDSP's capture for a WAV of the Pocket sweep (192 kHz, -10 dBFS used, played twice:
+  the first wakes everything, the analysis picks the second), records with arecord, restores the mode.
+  `scp scripts/pi_sweep.py joshis-pi:/tmp/ && ssh joshis-pi python3 /tmp/pi_sweep.py --level=-10 flat room`,
+  then `scp joshis-pi:/tmp/pi_sweep/*.wav`, `scripts/pocket_analyse.py` (90 degree cal) and
+  `scripts/compare_room.py flat.txt room.txt --png` (target as in design_peq; `--align` for runs at
+  different volumes).
+- Do not record the UMIK-1 on the PC with ffmpeg/dshow: Windows 11 "Voice clarity" (and other mic
+  enhancements) removes steady sounds, so the slow low end of a sweep and test tones vanished.
+  REW avoided it with WASAPI exclusive mode. The KEF and sub were fine.
+- Result, one position, sub on, normal volume (`measurements/2026-10-27_room/`): above 80 Hz on target
+  in both modes; rew_v1 cuts the 40/50/67 Hz peaks by 3-7 dB as designed, but the whole 18-80 Hz range
+  sits +6..+8 dB above target (Flat +8..+12): the sub is about 5 dB louder vs the speakers than on
+  2026-10-03. Narrow null at 105 Hz (-9 dB, sub/speaker overlap). RMS error 18-300 Hz: Flat 8.4 dB,
+  Room EQ 6.0 dB.
+
 ## Speaker chirp from the display (2026-10-05)
 
 A faint chirp/beep in the KEF stops when the backlight is off (brightness 0)
