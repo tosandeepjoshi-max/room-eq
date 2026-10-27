@@ -13,7 +13,8 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
 - [x] Bass slider on the Pi UI (low shelf under 80 Hz, -12..+6 dB), deployed to RAM 2026-10-27.
 - [ ] User: set the Bass slider to taste (about -5 dB measured at mid volume) #you
-- [ ] User: turn the overlay off so the bass slider is saved on the SD card, then on again #you
+- [x] Bass slider saved on the SD card (2026-10-27, overlay off).
+- [ ] User: turn the overlay on again #you
 - [ ] Optional: second filter round for 37/46 Hz after the bass level is set; try sub phase against the 105 Hz null.
 - [ ] Pi heatsink and closed case (watch CPU temp, ~56 C open).
 - [x] Phone EQ page: sweep + UMIK-1 measurement and PEQ design in Chrome on Android (car tuning), exports for Poweramp EQ / Equalizer314 / Wavelet / CamillaDSP. Source `web/phone_eq.html`. Published: https://claude.ai/artifact/V94Xsx2MX7YdWrJaj4FXBM
