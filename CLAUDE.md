@@ -291,6 +291,11 @@ How it works:
   `/run/systemd/timesync/synchronized` (max 180 s), since the Pi has no RTC.
   While running, a switch more than 10 min late is skipped. On/off:
   gear > Schedule (setting `auto_mode`, default on).
+- Bass slider (2026-10-27): meter panel, under Bypass / Sub off. Low shelf `__roomeq_bass`
+  (80 Hz, Q 0.707), -12..+6 dB in 0.5 dB steps, setting `bass_db`; command `bass` {value, save}
+  (live while dragging, saved on release; double-click resets to 0). Replaces the sub's own knob for
+  the speaker/sub balance. Off in Flat. Auto preamp covers a boost. The 2026-10-27 room check
+  suggests about -5 dB at mid volume.
 - Auto preamp (setting `auto_preamp`, default on): the effective preamp is
   minus the largest boost of all active filters (+0.1 dB margin), so boosts
   never clip; the preamp fader shows "auto" and cannot be dragged.

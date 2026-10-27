@@ -144,6 +144,12 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .btnrow button{font-size:14px;font-weight:600;background:var(--line);border:0;height:44px;cursor:pointer}
 .btnrow button[aria-pressed=true]{background:var(--coral);color:#2a0f0d}
 .mfoot{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.bassrow{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:8px;font-size:12px;font-weight:700}
+.bassrow input{grid-column:1 / -1;min-width:0}
+.bassrow input::-webkit-slider-thumb{border-color:var(--cyan)}
+.bassrow input::-moz-range-thumb{border-color:var(--cyan)}
+.bassrow input:disabled{opacity:.4}
+#bassval{font:12px var(--mono);min-width:56px;text-align:right;color:var(--muted)}
 
 /* appearance popover */
 .pop{position:fixed;top:84px;right:20px;width:316px;background:var(--raised);border:1px solid #4a5668;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.55);padding:16px;display:none;flex-direction:column;gap:12px;z-index:10;max-height:calc(100dvh - 100px);overflow-y:auto}
@@ -328,6 +334,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
         <button type="button" id="bypass" aria-pressed="false">Bypass</button>
         <button type="button" id="subcut" aria-pressed="false">Sub off</button>
       </div>
+      <div class="bassrow" title="Raises or lowers everything below 80 Hz (sub level). Double-click resets to 0.">
+        <label for="bass">Bass</label>
+        <span id="bassval">0.0 dB</span>
+        <input type="range" id="bass" min="-12" max="6" step="0.5" value="0" aria-label="Bass level below 80 Hz">
+      </div>
       <div class="mfoot"><span id="lcinfo">Sub off cuts below 80 Hz</span><span id="clip">Clip 0</span></div>
     </section>
   </div>
@@ -426,7 +437,7 @@ function startDemo() {
     { name: 'room 67', ...bq('Peaking', 66.7, -6.9, { q: 5 }) },
   ];
   setModel({ type: 'state', config_name: 'room_eq.yml', presets: ['movie.yml', 'room_eq.yml'], filters, samplerate: 192000,
-    mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5, auto_mode: true },
+    mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, bass_db: 0, bass_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5, auto_mode: true },
     mode_schedule: [{ time: '23:00', mode: 'vocal' }, { time: '09:00', mode: 'room' }],
     sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], has_backlight: true, screen_on: true, auto_preamp: true, auto_preamp_db: 0, can_restart_shield: true });
   status = { state: 'Running', capture_rate: 192000, temp: 56, load: 12, clipped: 0 }; drawStatus();
@@ -464,6 +475,7 @@ function demoCommand(obj) {
     }
     case 'set_bypass': m.bypass = obj.value; m.mode = obj.value ? 'flat' : (m.mode === 'flat' ? 'room' : m.mode); break;
     case 'set_lowcut': m.lowcut = obj.value; break;
+    case 'bass': m.bass_db = obj.value; break;
     case 'settings':
       if ('auto_preamp' in obj.values) m.auto_preamp = obj.values.auto_preamp;
       Object.assign(m.settings, obj.values); break;
@@ -567,6 +579,7 @@ function totalResponse() {
   }
   const extra = [];
   if (model.lowcut) extra.push({ type: 'BiquadCombo', parameters: { type: 'ButterworthHighpass', freq: model.lowcut_freq, order: 4 } });
+  if (model.bass_db) extra.push({ type: 'Biquad', parameters: { type: 'Lowshelf', freq: model.bass_freq || 80, gain: model.bass_db, q: 0.707 } });
   for (const f of extra) {
     const r = filterDb(f, fs);
     for (let i = 0; i < tot.length; i++) tot[i] += r[i];
@@ -615,6 +628,9 @@ function drawHeader() {
   $('save').setAttribute('aria-label', model.dirty ? 'Save changes to config file (unsaved changes)' : 'Save to config file');
   $('bypass').setAttribute('aria-pressed', model.bypass);
   $('subcut').setAttribute('aria-pressed', model.lowcut);
+  if (document.activeElement !== $('bass')) $('bass').value = model.bass_db || 0;
+  $('bass').disabled = !!model.bypass;
+  $('bassval').textContent = model.bypass ? 'off' : fmtDb(Number($('bass').value)) + ' dB';
   $('lcinfo').textContent = `Sub off cuts below ${model.lowcut_freq} Hz`;
   $('plotinfo').textContent = { flat: 'Bypassed', night: 'Night · compressor on', vocal: 'Vocal · speech lifted' }[mode]
     || (model.lowcut ? `Low cut ${model.lowcut_freq} Hz` : 'Stereo · L+R');
@@ -898,6 +914,14 @@ $('reconnect').addEventListener('click', () => {
 $('save').addEventListener('click', () => send({ cmd: 'save' }));
 $('bypass').addEventListener('click', () => send({ cmd: 'set_bypass', value: !model.bypass }));
 $('subcut').addEventListener('click', () => send({ cmd: 'set_lowcut', value: !model.lowcut }));
+let bassTimer = null;
+$('bass').addEventListener('input', (e) => {
+  $('bassval').textContent = fmtDb(Number(e.target.value)) + ' dB';
+  clearTimeout(bassTimer);
+  bassTimer = setTimeout(() => send({ cmd: 'bass', value: Number(e.target.value) }), 60);
+});
+$('bass').addEventListener('change', (e) => { clearTimeout(bassTimer); send({ cmd: 'bass', value: Number(e.target.value), save: true }); });
+$('bass').addEventListener('dblclick', () => { $('bass').value = 0; send({ cmd: 'bass', value: 0, save: true }); });
 function togglePop(open) { $('pop').classList.toggle('open', open); $('gear').classList.toggle('on', open); $('gear').setAttribute('aria-expanded', open); }
 $('gear').addEventListener('click', () => togglePop(!$('pop').classList.contains('open')));
 $('popclose').addEventListener('click', () => togglePop(false));

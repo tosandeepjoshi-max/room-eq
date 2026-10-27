@@ -28,6 +28,12 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 STATIC_DIR = Path(__file__).resolve().parent
 LOWCUT_NAME = "__roomeq_lowcut"
+# Bass slider: a low shelf under the sub range, in place of the sub's own volume knob. The KEF
+# volume moves speakers and sub together, but the balance between them was set once on the sub.
+# Off in Flat (no processing). Auto preamp covers a boost.
+BASS_NAME = "__roomeq_bass"
+BASS_FREQ, BASS_Q = 80.0, 0.707
+BASS_RANGE = (-12.0, 6.0)
 MODES = ("room", "flat", "night", "vocal")
 # Vocal and Night are tone-fader settings: switching mode moves the tone faders, and each mode
 # remembers its own adjustments in settings.json ("mode_tones"). Room EQ uses the preset's own values.
@@ -85,6 +91,7 @@ DEFAULT_SETTINGS = {
     "disabled": {},              # config path -> list of filter names switched off
     "mode_tones": copy.deepcopy(DEFAULT_MODE_TONES),   # mode -> {tone fader name: gain dB}
     "auto_mode": True,           # follow MODE_SCHEDULE
+    "bass_db": 0.0,              # bass slider (low shelf at BASS_FREQ)
     "shield_mac": None,          # Shield's MAC address, for "Restart Shield" over ADB
     "shield_host": None,         # last known Shield IP address
 }
@@ -365,6 +372,17 @@ class App:
             if chans is not None:
                 lc["channels"] = chans
             steps.insert(0, lc)
+        bass = float(self.settings.get("bass_db") or 0)
+        if bass and not self.bypass:
+            cfg.setdefault("filters", {})[BASS_NAME] = {
+                "type": "Biquad",
+                "parameters": {"type": "Lowshelf", "freq": BASS_FREQ, "gain": bass, "q": BASS_Q},
+            }
+            chans = self._channels(cfg)
+            bs = {"type": "Filter", "names": [BASS_NAME]}
+            if chans is not None:
+                bs["channels"] = chans
+            steps.insert(0, bs)
         if self.mode == "night" and not self.bypass:
             cfg["processors"] = dict(cfg.get("processors") or {}, __night_comp=copy.deepcopy(NIGHT_COMPRESSOR))
             steps.append({"type": "Processor", "name": "__night_comp"})
@@ -461,6 +479,9 @@ class App:
             "lowcut": self.lowcut,
             "compressor": self.mode == "night" and not self.bypass,
             "lowcut_freq": self.settings["lowcut_freq"],
+            "bass_db": float(self.settings.get("bass_db") or 0),
+            "bass_freq": BASS_FREQ,
+            "bass_range": BASS_RANGE,
             "dirty": self.dirty,
             "can_undo": bool(self.history),
             "settings": {k: self.settings[k] for k in
@@ -505,6 +526,14 @@ class App:
         if cmd == "restart_shield":
             if not self.restarting_shield:
                 asyncio.ensure_future(self.restart_shield())
+            return
+        if cmd == "bass":
+            # Live while dragging; saved to settings.json when save is true (the slider is released).
+            lo, hi = BASS_RANGE
+            self.settings["bass_db"] = round(max(lo, min(hi, float(msg["value"]))) * 2) / 2
+            self.schedule_apply()
+            if msg.get("save"):
+                self.save_settings()
             return
         if cmd == "brightness":
             # Live while dragging; saved to settings.json only when save is true (the slider is released).
