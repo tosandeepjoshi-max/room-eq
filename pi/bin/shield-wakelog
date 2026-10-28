@@ -1,0 +1,37 @@
+#!/bin/bash
+# Records what wakes the Shield. Runs on the Pi; reading logcat over ADB does not wake it.
+# Each wake goes to wakes.log with the 60 log lines before it; sleeps are logged too.
+# Start:  nohup setsid ~/bin/shield-wakelog >/dev/null 2>&1 </dev/null &
+# Stop:   kill $(cat ~/shield-wakelog/pid)
+HOST=${1:-192.168.110.211:5555}
+OUT=${2:-$HOME/shield-wakelog}
+mkdir -p "$OUT"
+echo $$ > "$OUT/pid"
+LOG="$OUT/wakes.log"
+
+while true; do
+  adb connect "$HOST" >/dev/null 2>&1
+  if [ "$(adb -s "$HOST" get-state 2>/dev/null)" = device ]; then
+    # Resume from the last line seen, so a dropped link loses nothing.
+    if [ -s "$OUT/last" ]; then since=$(cat "$OUT/last"); else since=1; fi
+    echo "$(date '+%F %T') connected (from: $since)" >> "$LOG"
+    adb -s "$HOST" logcat -b all -v time -T "$since" 2>/dev/null | mawk -W interactive -v logf="$LOG" -v last="$OUT/last" '
+      /adbd|chatty|glide-source|ANQPRequestManager/ { next }
+      {
+        buf[n % 60] = $0; n++
+        if (n % 200 == 0) { print $1 " " $2 > last; close(last) }
+      }
+      /Waking up from/ {
+        print "=== WAKE ===" >> logf
+        for (i = (n > 60 ? n - 60 : 0); i < n; i++) print buf[i % 60] >> logf
+        print "" >> logf; fflush(logf)
+        print $1 " " $2 > last; close(last)
+        next
+      }
+      /Going to sleep|HdmiControlService.*(ActiveSource|Image View On|Text View On|oneTouchPlay)/ {
+        print $0 >> logf; fflush(logf)
+      }'
+    echo "$(date '+%F %T') logcat ended" >> "$LOG"
+  fi
+  sleep 30
+done

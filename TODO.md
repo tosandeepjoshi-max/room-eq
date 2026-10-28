@@ -10,6 +10,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 
 - [~] miniDSP flash backup with a Pi Pico + grab clips: `scripts/minidsp_flash.py` (firmware, install, probe, id, read x2, compare). MicroPython 1.29.0 in `pico/firmware/` (not in git). See CLAUDE.md, "miniDSP 2x4 HD / DDRC-24".
 - [ ] User: solder or press-fit a header on Pico holes 3-7, wire the grab clips (chip pins 1, 2, 4, 8 + GND), board on its own supply #you
+- [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
 - [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
 - [x] Bass slider on the Pi UI (low shelf under 80 Hz, -12..+6 dB), deployed to RAM 2026-10-27.

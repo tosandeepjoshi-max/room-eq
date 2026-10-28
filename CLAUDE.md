@@ -381,6 +381,13 @@ Shield debloat (2026-10-27, Android 11, from the PC with `pm uninstall --user 0`
   `com.google.android.tvrecommendations` starts the launcher's boot-helper screen at sleep,
   with turn-screen-on. Disabled it (`pm disable-user --user 0`); the Shield now stays asleep.
   Debug wakes: `logcat | grep "Waking up from"` and the `START u0` line just before it.
+- 2026-10-28 night: it woke again; the user unplugged it, which erases the Shield's log (RAM
+  only; `persist.logd.logpersistd` is blocked for adb). The Pi's own adb key works again.
+  Wake logger on the Pi: `pi/bin/shield-wakelog` (copy in `~/bin/`), output
+  `~/shield-wakelog/wakes.log` (each wake + 60 lines before it). Start:
+  `nohup setsid ~/bin/shield-wakelog >/dev/null 2>&1 </dev/null &`; stop: `kill` the PID in
+  `~/shield-wakelog/pid` and its adb/mawk children. Overlay on: log and process are gone after a
+  Pi reboot. Needs `mawk -W interactive` (mawk buffers piped input).
 
 ## Touchscreen kiosk
 
