@@ -364,6 +364,16 @@ Restart Shield over ADB (2026-10-16):
 - Shield side: Developer options > Network debugging on; the Pi's ADB key is
   accepted once on the TV ("Always allow"). The key is `~/.android/adbkey` on
   the Pi: create it with the overlay off, or it is lost at reboot.
+- 2026-10-27: the Pi's key was rejected again ("unauthorized"; likely lost to the
+  overlay). The PC key is accepted: `adb connect 192.168.110.211:5555` from the PC.
+
+Shield debloat (2026-10-27, Android 11, from the PC with `pm uninstall --user 0`):
+- Removed: Vudu, Google Play Music, Play Movies (`com.google.android.videos`),
+  Play Games, NVIDIA Games (`com.nvidia.tegrazone3`), `com.nvidia.nvgamecast`,
+  `com.nvidia.stats`, `com.nvidia.feedback`, `com.google.android.feedback`.
+- Kept on purpose: Amazon Music, YouTube TV (`com.google.android.youtube.tvunplugged`).
+- Restore one: `adb shell cmd package install-existing <package>`. A factory reset
+  restores all.
 
 ## Touchscreen kiosk
 
