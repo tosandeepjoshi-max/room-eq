@@ -374,6 +374,9 @@ Shield debloat (2026-10-27, Android 11, from the PC with `pm uninstall --user 0`
 - Kept on purpose: Amazon Music, YouTube TV (`com.google.android.youtube.tvunplugged`).
 - Restore one: `adb shell cmd package install-existing <package>`. A factory reset
   restores all.
+- Launcher: Projectivy (`com.spocky.projengmenu`) is the only Home app. The stock
+  launcher had system priority, so it is disabled:
+  `pm disable-user --user 0 com.google.android.tvlauncher`. Undo: `pm enable com.google.android.tvlauncher`.
 
 ## Touchscreen kiosk
 
