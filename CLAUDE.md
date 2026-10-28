@@ -377,6 +377,10 @@ Shield debloat (2026-10-27, Android 11, from the PC with `pm uninstall --user 0`
 - Launcher: Projectivy (`com.spocky.projengmenu`) is the only Home app. The stock
   launcher had system priority, so it is disabled:
   `pm disable-user --user 0 com.google.android.tvlauncher`. Undo: `pm enable com.google.android.tvlauncher`.
+- 2026-10-28: with the stock launcher off, the Shield woke itself 1-2 s after each sleep:
+  `com.google.android.tvrecommendations` starts the launcher's boot-helper screen at sleep,
+  with turn-screen-on. Disabled it (`pm disable-user --user 0`); the Shield now stays asleep.
+  Debug wakes: `logcat | grep "Waking up from"` and the `START u0` line just before it.
 
 ## Touchscreen kiosk
 
