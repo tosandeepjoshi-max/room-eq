@@ -12,7 +12,10 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] User: desolder the flash chip and wire it off-board to the Pico (done 2026-10-29).
 - [x] miniDSP: image analysed 2026-10-29: the AT45 holds DSP/preset data, not the XMOS firmware (no USB strings). Keep it unchanged.
 - [x] User: XMOS marking and board photos (2026-10-29): no external XMOS flash; flash is inside the XMOS.
-- [ ] miniDSP: after the AT45 is back, plug the miniDSP into the PC and try the XMOS DFU revert-to-factory request over USB (see CLAUDE.md).
+- [x] miniDSP: USB revert-to-factory tried 2026-10-29: every DFU request hangs (see CLAUDE.md); USB route closed.
+- [ ] User: order an XMOS XTAG-4 (XA-XTAG4, Mouser/Digi-Key ~$27; not on Amazon) and an XMOS account for XTC Tools #you
+- [ ] miniDSP: find the 2x4 header's JTAG pinout (continuity to XMOS TCK/TMS/TDI/TDO/RST_N), then read the XMOS internal flash with xflash
+- [ ] User: when done with the miniDSP on this PC, restore miniDSP's USB driver (Device Manager > Uninstall device + delete driver, replug) #you
 - [x] User: resolder the AT45 unchanged (done 2026-10-29; no bridges, all legs beep, VCC-GND 170 ohm = board load)
 - [x] DSP left-row legs ~7-8 joined: user judges it a deliberate factory joint, left as is (2026-10-29)
 - [x] Shield self-wake: found (app left in front at sleep) and fixed with the Sleep Home app; Pi wake logger no longer needed (2026-10-29).

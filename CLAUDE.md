@@ -163,6 +163,19 @@ left open (internal pull-ups). ID `1f 27 01`, status 0xB4 (528-byte pages). Two 
   over USB: it erases the upgrade image, so the XMOS boots its factory image again (likely the
   original miniDSP firmware). Needs the WinUSB driver on the DFU interface (Zadig, done by the user).
   (3) Fallback: XMOS xTAG on the 2x4 header, read the internal flash, erase only the upgrade image.
+- USB attempts 2026-10-29 (all failed, device unchanged, still UMIK-2 2.06):
+  - miniDSP driver API (`miniDSPUAC2api_x64.dll`, Thesycon TUSBAUDIO API 5.11) works from Python
+    ctypes. `TUSBAUDIO_StartDfuRevertToFactoryImage(handle, flags)` returns 0xEE000047 INVALID_INDEX.
+    `TUSBAUDIO_ClassVendorRequestOut` (10 args) to the DFU interface: REJECTED or TIMEOUT.
+  - Device descriptor: IF0 audio control, IF1 audio in (3 alts), IF2 DFU runtime (DFU 1.1,
+    attrs 0x07, detach 250 ms), IF3 HID.
+  - With WinUSB on the whole device (Zadig, `USB\VID_2752&PID_002B`): standard requests work,
+    but DFU GETSTATUS on IF2 times out (3 s) on a freshly powered device, then EP0 stalls.
+  - Conclusion: every DFU request hangs. In XMOS lib_xua each DFU request first stops the audio
+    core and waits for its handshake; the UMIK-2 build's audio core is likely stuck on the miniDSP
+    hardware. This also explains the old 0xEE000003 timeout. The USB route is closed; use an XTAG-4.
+  - Undo: Device Manager > the UMIK-2 / USB device > Uninstall device, tick "delete the driver",
+    replug; the miniDSPUAC2 driver comes back (also for the HID part, MI_03, set to WinUSB first).
 
 ## Git
 
