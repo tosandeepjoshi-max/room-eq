@@ -271,6 +271,13 @@ Screen sleep and brightness (2026-10-03):
   so no sudo). The first touch only wakes it: the cover swallows that touch.
 - Commands: `screen` {on}, `brightness` {value, save}. If the page that put the
   screen to sleep disconnects, the server turns the backlight back on.
+- Dim stage and Screen off (2026-10-29): after `dim_minutes` (default 2; choices 0/1/2/5) of no
+  touch the kiosk page sends `screen` {on: true, dim: true}; the server sets the backlight to
+  `DIM_PCT` (8 % = 20 of 255) and a transparent cover swallows the waking touch. Off after
+  `sleep_minutes` (default now 10). Moon button in the header: on the kiosk it goes dark at once;
+  on a phone it sends `screen_off`, which the server broadcasts, and the kiosk page goes dark.
+  Settings: "Dim after" and "Off after". Deployed 2026-10-29 with the overlay ON (RAM only), user
+  settings sleep 10 / dim 2; tested on the Pi: dim 20, awake 255, screen_off 0.
 
 How it works:
 - CamillaDSP client fix (2026-10-22): a call cancelled after sending (the

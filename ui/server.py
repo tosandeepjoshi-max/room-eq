@@ -55,6 +55,8 @@ NIGHT_COMPRESSOR = {"type": "Compressor", "parameters": {
 # Touchscreen backlight; writable by the video group, so no sudo is needed.
 BACKLIGHT_DIR = os.environ.get("ROOMEQ_BACKLIGHT") or next(iter(sorted(Path("/sys/class/backlight").glob("*"))), None)
 SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never
+DIM_CHOICES = (0, 1, 2, 5)                      # minutes of no touch before the screen dims; 0 = never
+DIM_PCT = 8                                     # dimmed backlight, percent of maximum
 # Resets the USB gadget link to the Shield (stop camilladsp, reload g_audio, start camilladsp).
 # Needs a root-owned /usr/local/bin/roomeq-reconnect and a sudoers rule allowing it without a password.
 RECONNECT_CMD = ["sudo", "-n", "/usr/local/bin/roomeq-reconnect"]
@@ -87,7 +89,8 @@ DEFAULT_SETTINGS = {
     "auto_preamp": True,         # preamp follows the largest boost so boosts never clip
     "lowcut_freq": 80,
     "brightness": 100,           # touchscreen backlight, percent (10-100)
-    "sleep_minutes": 5,          # touchscreen goes dark after this idle time; 0 = never
+    "sleep_minutes": 10,         # touchscreen goes dark after this idle time; 0 = never
+    "dim_minutes": 2,            # touchscreen dims after this idle time (before it goes dark); 0 = never
     "disabled": {},              # config path -> list of filter names switched off
     "mode_tones": copy.deepcopy(DEFAULT_MODE_TONES),   # mode -> {tone fader name: gain dB}
     "auto_mode": True,           # follow MODE_SCHEDULE
@@ -214,7 +217,8 @@ class App:
         self.signal_levels_cmd = True
         self.error = None
         self.screen_on = True
-        self.screen_owner = None    # the screen (websocket) that put the display to sleep
+        self.screen_dim = False
+        self.screen_owner = None    # the screen (websocket) that dimmed the display or put it to sleep
         self.reconnecting = False
         self.restarting_shield = False
         self.recover_delay = 5      # seconds until the next auto-restart attempt; backs off to 30
@@ -308,14 +312,16 @@ class App:
 
     # ---------- touchscreen backlight ----------
     def apply_backlight(self):
-        """Backlight off while asleep, otherwise at the saved brightness."""
+        """Backlight off while asleep, low while dimmed, otherwise at the saved brightness."""
         if BACKLIGHT_DIR is None:
             return
         d = Path(BACKLIGHT_DIR)
         try:
             top = int((d / "max_brightness").read_text())
             pct = max(10, min(100, int(self.settings.get("brightness", 100))))
-            (d / "brightness").write_text(str(round(top * pct / 100) if self.screen_on else 0))
+            if self.screen_dim:
+                pct = min(pct, DIM_PCT)
+            (d / "brightness").write_text(str(max(1, round(top * pct / 100)) if self.screen_on else 0))
         except (OSError, ValueError) as exc:
             self.error = f"Backlight: {exc}"
 
@@ -486,9 +492,10 @@ class App:
             "can_undo": bool(self.history),
             "settings": {k: self.settings[k] for k in
                          ("background", "background_file", "logo_file", "opacity",
-                          "brightness", "sleep_minutes", "auto_preamp", "auto_mode")},
+                          "brightness", "sleep_minutes", "dim_minutes", "auto_preamp", "auto_mode")},
             "mode_schedule": [{"time": f"{h:02d}:{m:02d}", "mode": mode} for h, m, mode in MODE_SCHEDULE],
             "sleep_choices": SLEEP_CHOICES,
+            "dim_choices": DIM_CHOICES,
             "has_backlight": BACKLIGHT_DIR is not None,
             "screen_on": self.screen_on,
             "auto_preamp": bool(self.settings.get("auto_preamp")),
@@ -514,10 +521,16 @@ class App:
     async def handle(self, msg, ws=None):
         cmd = msg.get("cmd")
         if cmd == "screen":
-            # Sent by the touchscreen page: on=False after its idle time, on=True on touch.
+            # Sent by the touchscreen page: dim=True after its dim time, on=False after its sleep time
+            # or on "Screen off", on=True (dim False) on touch.
             self.screen_on = bool(msg.get("on"))
-            self.screen_owner = None if self.screen_on else ws
+            self.screen_dim = self.screen_on and bool(msg.get("dim"))
+            self.screen_owner = None if self.screen_on and not self.screen_dim else ws
             self.apply_backlight()
+            return
+        if cmd == "screen_off":
+            # "Screen off" button on any screen (e.g. a phone during a movie): the touchscreen page goes dark now.
+            await self.broadcast({"type": "screen_off"})
             return
         if cmd == "reconnect":
             if not self.reconnecting:
@@ -641,6 +654,8 @@ class App:
                     self.settings[k] = msg["values"][k]
             if int(msg.get("values", {}).get("sleep_minutes", -1)) in SLEEP_CHOICES:
                 self.settings["sleep_minutes"] = int(msg["values"]["sleep_minutes"])
+            if int(msg.get("values", {}).get("dim_minutes", -1)) in DIM_CHOICES:
+                self.settings["dim_minutes"] = int(msg["values"]["dim_minutes"])
             if "auto_mode" in msg.get("values", {}):
                 self.settings["auto_mode"] = bool(msg["values"]["auto_mode"])
             if "auto_preamp" in msg.get("values", {}):
@@ -914,9 +929,9 @@ async def ws_handler(request):
                     await app_state.broadcast_state()
     finally:
         app_state.clients.discard(ws)
-        if ws is app_state.screen_owner and not app_state.screen_on:
-            # The touchscreen page went away while dark (browser closed): never leave it stuck off.
-            app_state.screen_on, app_state.screen_owner = True, None
+        if ws is app_state.screen_owner and (not app_state.screen_on or app_state.screen_dim):
+            # The touchscreen page went away while dark or dim (browser closed): never leave it stuck off.
+            app_state.screen_on, app_state.screen_dim, app_state.screen_owner = True, False, None
             app_state.apply_backlight()
     return ws
 

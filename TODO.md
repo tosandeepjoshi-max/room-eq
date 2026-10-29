@@ -16,6 +16,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] User: resolder the AT45 unchanged (done 2026-10-29; no bridges, all legs beep, VCC-GND 170 ohm = board load)
 - [x] DSP left-row legs ~7-8 joined: user judges it a deliberate factory joint, left as is (2026-10-29)
 - [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
+- [ ] Room EQ kiosk: screen off after N min with no audio (CamillaDSP Stalled / capture rate 0), back on when audio starts; works for any source, no Shield change.
 - [~] Shield sleep = Home + sleep without the Pi: own app `shield/sleephome` installed and enabled 2026-10-29; sleep test passed, also after a Shield restart. Check after real sleeps: Pi `wakes.log` `sleephome:` line says "was com.spocky.projengmenu..." (the app already went Home). After 2-3 clean nights, stop the Pi hook (remove the `/Going to sleep/ { system(hook ...) }` line in `pi/bin/shield-wakelog`).
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
 - [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
@@ -24,6 +25,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Bass slider saved on the SD card (2026-10-27, overlay off).
 - [x] Overlay on again (2026-10-27); bass -5 dB and rew_v1 confirmed after reboot.
 - [ ] Optional: second filter round for 37/46 Hz after the bass level is set; try sub phase against the 105 Hz null.
+- [ ] User: make the screen dim/off and Screen off button permanent: turn the overlay off, I redeploy ui/server.py + ui/index.html and set sleep 10 / dim 2, overlay on again #you
 - [ ] Pi heatsink and closed case (watch CPU temp, ~56 C open).
 - [x] Phone EQ page: sweep + UMIK-1 measurement and PEQ design in Chrome on Android (car tuning), exports for Poweramp EQ / Equalizer314 / Wavelet / CamillaDSP. Source `web/phone_eq.html`. Published: https://claude.ai/artifact/V94Xsx2MX7YdWrJaj4FXBM
 - [x] User: first real measurement with the phone, a recorder app and the UMIK-1 (car): done 2026-10-23 (split screen, 5 full sweeps); car_v1 normal/gentle/bass pushed to the phone.

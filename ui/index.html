@@ -172,6 +172,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .selbox{background:var(--sunk);color:var(--text);border:1px solid #4a5668;border-radius:8px;height:36px;padding:0 10px;font:600 13px var(--sans)}
 .sleep{position:fixed;inset:0;background:#000;z-index:100;display:none;touch-action:none}
 .sleep.show{display:block}
+.sleep.dim{background:transparent}
 
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#4a1f1c;border:1px solid var(--coral);color:var(--text);padding:10px 16px;border-radius:10px;font-size:13px;max-width:80vw;display:none;z-index:20}
 .toast.show{display:block}
@@ -283,6 +284,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
     </div>
     <div class="hright">
       <span class="status"><i id="sdot"></i><span id="stext">Connecting</span></span>
+      <button class="ico" id="screenoff" type="button" aria-label="Turn the touchscreen off now (a touch wakes it)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
       <button class="ico" id="reconnect" type="button" aria-label="Reconnect the Shield (resets the USB audio link)"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v4M15 3v4"/><path d="M6 7h12v3a6 6 0 0 1-12 0z"/><path d="M12 16v5"/></svg></button>
       <button class="ico" id="undo" type="button" aria-label="Undo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 7 L4 12 L9 17"/><path d="M4 12 H15 A5 5 0 0 1 15 22"/></svg></button>
       <button class="ico" id="save" type="button" aria-label="Save to config file"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M5 3 H16 L21 8 V21 H3 V3 Z"/><path d="M7 3 V9 H15 V3"/><rect x="7" y="13" width="10" height="6"/></svg><span class="dot" id="dirtydot" hidden></span></button>
@@ -354,8 +356,9 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
     <label for="bright"><span>Brightness</span><span id="brval">100%</span></label>
     <input type="range" id="bright" min="10" max="100" step="1" value="100">
   </div>
-  <div class="oprow"><label for="sleepsel"><span>Sleep after</span></label><select id="sleepsel" class="selbox"></select></div>
-  <p class="hint" style="margin:0">Only the touchscreen sleeps. The first touch just wakes it.</p>
+  <div class="oprow"><label for="dimsel"><span>Dim after</span></label><select id="dimsel" class="selbox"></select></div>
+  <div class="oprow"><label for="sleepsel"><span>Off after</span></label><select id="sleepsel" class="selbox"></select></div>
+  <p class="hint" style="margin:0">Counted from the last touch on the touchscreen. The moon button turns it off at once, also from a phone. The first touch just wakes it.</p>
   <div id="shieldsec" hidden>
   <h3>Shield</h3>
   <button class="popbtn" type="button" id="shieldbtn">Restart Shield</button>
@@ -408,7 +411,7 @@ function connect() {
   if (DEMO) { startDemo(); return; }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}/ws`);
-  ws.onopen = () => { $('offline').classList.remove('show'); if (asleep) send({ cmd: 'screen', on: false }); };
+  ws.onopen = () => { $('offline').classList.remove('show'); if (asleep) send({ cmd: 'screen', on: false }); else if (dimmed) send({ cmd: 'screen', on: true, dim: true }); };
   ws.onclose = () => { $('offline').classList.add('show'); setTimeout(connect, 1500); };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
@@ -417,6 +420,7 @@ function connect() {
     else if (msg.type === 'status') { status = msg; drawStatus(); }
     else if (msg.type === 'notice') toast(msg.text, msg.ok, msg.action);
     else if (msg.type === 'selected') { selected = msg.name; detailKey = ''; if (model) render(); }
+    else if (msg.type === 'screen_off' && KIOSK && !asleep) goSleep();
   };
 }
 function send(obj) {
@@ -437,9 +441,9 @@ function startDemo() {
     { name: 'room 67', ...bq('Peaking', 66.7, -6.9, { q: 5 }) },
   ];
   setModel({ type: 'state', config_name: 'room_eq.yml', presets: ['movie.yml', 'room_eq.yml'], filters, samplerate: 192000,
-    mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, bass_db: 0, bass_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 5, auto_mode: true },
+    mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, bass_db: 0, bass_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 10, dim_minutes: 2, auto_mode: true },
     mode_schedule: [{ time: '23:00', mode: 'vocal' }, { time: '09:00', mode: 'room' }],
-    sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], has_backlight: true, screen_on: true, auto_preamp: true, auto_preamp_db: 0, can_restart_shield: true });
+    sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], dim_choices: [0, 1, 2, 5], has_backlight: true, screen_on: true, auto_preamp: true, auto_preamp_db: 0, can_restart_shield: true });
   status = { state: 'Running', capture_rate: 192000, temp: 56, load: 12, clipped: 0 }; drawStatus();
   let t = 0;
   setInterval(() => {
@@ -944,28 +948,50 @@ $('bgfile').addEventListener('change', (e) => { if (e.target.files[0]) upload('b
 /* ---------- screen sleep (touchscreen only) ---------- */
 // The kiosk browser on the Pi opens localhost; phones use the Pi's name, so they never sleep.
 const KIOSK = ['localhost', '127.0.0.1'].includes(location.hostname);
-let asleep = false, idleTimer = null, armedFor = null;
+// Stages: awake -> dimmed (backlight low, page still visible) -> asleep (backlight off, black cover).
+let asleep = false, dimmed = false, idleTimer = null, dimTimer = null, armedFor = null;
 function armIdle() {
-  clearTimeout(idleTimer);
-  const min = (model && model.settings && model.settings.sleep_minutes) || 0;
-  armedFor = min;
-  if (KIOSK && min && !asleep) idleTimer = setTimeout(goSleep, min * 60000);
+  clearTimeout(idleTimer); clearTimeout(dimTimer);
+  const s = (model && model.settings) || {};
+  const min = s.sleep_minutes || 0, dim = s.dim_minutes || 0;
+  armedFor = min + '/' + dim;
+  if (!KIOSK || asleep) return;
+  if (min) idleTimer = setTimeout(goSleep, min * 60000);
+  if (dim && !dimmed && (!min || dim < min)) dimTimer = setTimeout(goDim, dim * 60000);
+}
+function goDim() {
+  if (dragging) { armIdle(); return; }
+  dimmed = true;
+  $('sleep').classList.add('show', 'dim');       // transparent cover: catches the waking touch
+  send({ cmd: 'screen', on: true, dim: true });
 }
 function goSleep() {
   if (dragging) { armIdle(); return; }
-  asleep = true; togglePop(false);
-  $('sleep').classList.add('show');
+  clearTimeout(idleTimer); clearTimeout(dimTimer);
+  asleep = true; dimmed = false; togglePop(false);
+  $('sleep').classList.remove('dim'); $('sleep').classList.add('show');
   send({ cmd: 'screen', on: false });
 }
-// The waking touch is swallowed: the black cover stays until the finger lifts, so nothing underneath gets pressed.
+function wake() {
+  asleep = false; dimmed = false;
+  send({ cmd: 'screen', on: true, dim: false });
+  armIdle();
+}
+// The waking touch is swallowed: the cover stays until the finger lifts, so nothing underneath gets pressed.
 $('sleep').addEventListener('pointerdown', (e) => {
   e.preventDefault(); e.stopPropagation();
-  if (asleep) { asleep = false; send({ cmd: 'screen', on: true }); armIdle(); }
+  if (asleep || dimmed) wake();
 });
-const uncover = () => setTimeout(() => { if (!asleep) $('sleep').classList.remove('show'); }, 350);
+const uncover = () => setTimeout(() => { if (!asleep && !dimmed) $('sleep').classList.remove('show', 'dim'); }, 350);
 $('sleep').addEventListener('pointerup', uncover); $('sleep').addEventListener('pointercancel', uncover);
-['pointerdown', 'keydown', 'wheel'].forEach((t) => document.addEventListener(t, () => { if (!asleep) armIdle(); }, true));
-document.addEventListener('keydown', () => { if (asleep) { asleep = false; send({ cmd: 'screen', on: true }); $('sleep').classList.remove('show'); armIdle(); } }, true);
+['pointerdown', 'keydown', 'wheel'].forEach((t) => document.addEventListener(t, () => { if (!asleep && !dimmed) armIdle(); }, true));
+document.addEventListener('keydown', () => { if (asleep || dimmed) { wake(); $('sleep').classList.remove('show', 'dim'); } }, true);
+// Moon button: the touchscreen goes dark now. On a phone it asks the server to tell the touchscreen.
+$('screenoff').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (KIOSK) setTimeout(goSleep, 300);           // after the finger lifts, so the release does not wake it
+  else { send({ cmd: 'screen_off' }); toast('Touchscreen off', true); }
+});
 function applyScreenSettings() {
   const s = model.settings || {};
   $('brightrow').hidden = !model.has_backlight;
@@ -975,7 +1001,12 @@ function applyScreenSettings() {
   const opts = choices.map((m) => `<option value="${m}">${m ? m + ' min' : 'Never'}</option>`).join('');
   if ($('sleepsel').dataset.opts !== opts) { $('sleepsel').innerHTML = opts; $('sleepsel').dataset.opts = opts; }
   $('sleepsel').value = s.sleep_minutes ?? 0;
-  if (armedFor !== (s.sleep_minutes || 0)) armIdle();
+  const dchoices = model.dim_choices || [0, 1, 2, 5];
+  const dopts = dchoices.map((m) => `<option value="${m}">${m ? m + ' min' : 'Never'}</option>`).join('');
+  if ($('dimsel').dataset.opts !== dopts) { $('dimsel').innerHTML = dopts; $('dimsel').dataset.opts = dopts; }
+  $('dimsel').value = s.dim_minutes ?? 0;
+  $('screenoff').hidden = !model.has_backlight;
+  if (armedFor !== (s.sleep_minutes || 0) + '/' + (s.dim_minutes || 0)) armIdle();
   $('automode').setAttribute('aria-checked', String(s.auto_mode !== false));
   $('shieldsec').hidden = !model.can_restart_shield;
   $('shieldbtn').disabled = !!model.restarting_shield;
@@ -995,6 +1026,7 @@ $('bright').addEventListener('change', (e) => send({ cmd: 'brightness', value: N
 $('shieldbtn').addEventListener('click', () => { if (confirm('Restart the Shield? Playback stops for about a minute.')) send({ cmd: 'restart_shield' }); });
 $('automode').addEventListener('click', () => send({ cmd: 'settings', values: { auto_mode: !(model.settings && model.settings.auto_mode !== false) } }));
 $('sleepsel').addEventListener('change', (e) => send({ cmd: 'settings', values: { sleep_minutes: Number(e.target.value) } }));
+$('dimsel').addEventListener('change', (e) => send({ cmd: 'settings', values: { dim_minutes: Number(e.target.value) } }));
 
 buildGrid();
 connect();
