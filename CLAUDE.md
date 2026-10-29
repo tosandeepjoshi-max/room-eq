@@ -397,51 +397,8 @@ Restart Shield over ADB (2026-10-16):
 - 2026-10-27: the Pi's key was rejected again ("unauthorized"; likely lost to the
   overlay). The PC key is accepted: `adb connect 192.168.110.211:5555` from the PC.
 
-Shield debloat (2026-10-27, Android 11, from the PC with `pm uninstall --user 0`):
-- Removed: Vudu, Google Play Music, Play Movies (`com.google.android.videos`),
-  Play Games, NVIDIA Games (`com.nvidia.tegrazone3`), `com.nvidia.nvgamecast`,
-  `com.nvidia.stats`, `com.nvidia.feedback`, `com.google.android.feedback`.
-- Kept on purpose: Amazon Music, YouTube TV (`com.google.android.youtube.tvunplugged`).
-- Restore one: `adb shell cmd package install-existing <package>`. A factory reset
-  restores all.
-- Launcher: Projectivy (`com.spocky.projengmenu`) is the only Home app. The stock
-  launcher had system priority, so it is disabled:
-  `pm disable-user --user 0 com.google.android.tvlauncher`. Undo: `pm enable com.google.android.tvlauncher`.
-- 2026-10-28: with the stock launcher off, the Shield woke itself 1-2 s after each sleep:
-  `com.google.android.tvrecommendations` starts the launcher's boot-helper screen at sleep,
-  with turn-screen-on. Disabled it (`pm disable-user --user 0`); the Shield now stays asleep.
-  Debug wakes: `logcat | grep "Waking up from"` and the `START u0` line just before it.
-- 2026-10-28 night: it woke again; the user unplugged it, which erases the Shield's log (RAM
-  only; `persist.logd.logpersistd` is blocked for adb). The Pi's own adb key works again.
-  Wake logger on the Pi: `pi/bin/shield-wakelog` (copy in `~/bin/`), output
-  `~/shield-wakelog/wakes.log` (each wake + 60 lines before it). Start:
-  `nohup setsid ~/bin/shield-wakelog >/dev/null 2>&1 </dev/null &`; stop: `kill` the PID in
-  `~/shield-wakelog/pid` and its adb/mawk children. Overlay on: log and process are gone after a
-  Pi reboot. Needs `mawk -W interactive` (mawk buffers piped input). Stop it with
-  `kill -- -<pid>` (setsid makes the PID the process group, so adb and mawk stop too).
-- 2026-10-29 02:41 wake: Prime Video was left in front at sleep, exited itself, Android restarted
-  it as the top activity and its turnScreenOn woke the TV. Cause: the stock launcher used to come
-  to the front at each sleep; with it disabled, the last app stays in front.
-  Fix (user's choice, way 3): the logger runs `pi/bin/shield-sleephome` at each "Going to sleep".
-  After 5 s, if the Shield is Asleep/Dozing, it opens Home (Projectivy); if the Shield woke, it
-  sends KEYCODE_SLEEP. Each run logs a `sleephome:` line in `wakes.log`. Works only while the
-  Pi and the logger run. Other ways: re-enable tvlauncher + tvrecommendations and use
-  Projectivy's "Override current launcher", or an automation app on the Shield.
-- Sleep Home app (2026-10-29, user's choice; the user does not want Google recommendations back):
-  `shield/sleephome/`, package `com.joshi.sleephome`, an accessibility service that opens Home on
-  each SCREEN_OFF (an accessibility service may start activities from the background on Android
-  11, and the system restarts it at boot). Log tag `SleepHome`. Build:
-  `.venv\Scripts\python shield\sleephome\build.py` (JDK 17 from winget, SDK in
-  `%LOCALAPPDATA%\Android\Sdk`: build-tools 34.0.0 + android-30; signed with
-  `~/.android/debug.keystore`). Installed from the Pi (`adb install -r`; the PC key was
-  unauthorized that day) and enabled by adding
-  `com.joshi.sleephome/com.joshi.sleephome.SleepHomeService` to `enabled_accessibility_services`
-  after Projectivy's entry (colon-separated; keep Projectivy's). The Pi hook stays as a backup
-  until the app is proven.
-  Tested 2026-10-29 with YouTube in front, before and after a Shield restart: SCREEN_OFF comes
-  ~2-3 s after "Going to sleep", then the app starts Home (`START u0 ... HOME ... from uid 10038`,
-  `SleepHome: screen off: Home opened`); the Shield stayed asleep. Both accessibility services
-  bound by themselves after the restart.
+Shield setup (debloat, Projectivy as the only Home, Sleep Home app, restore after a factory
+reset): see `shield/README.md` and `shield/restore.sh`. Done 2026-10-29.
 
 ## Touchscreen kiosk
 

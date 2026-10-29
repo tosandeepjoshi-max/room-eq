@@ -15,9 +15,9 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [ ] miniDSP: after the AT45 is back, plug the miniDSP into the PC and try the XMOS DFU revert-to-factory request over USB (see CLAUDE.md).
 - [x] User: resolder the AT45 unchanged (done 2026-10-29; no bridges, all legs beep, VCC-GND 170 ohm = board load)
 - [x] DSP left-row legs ~7-8 joined: user judges it a deliberate factory joint, left as is (2026-10-29)
-- [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
+- [x] Shield self-wake: found (app left in front at sleep) and fixed with the Sleep Home app; Pi wake logger no longer needed (2026-10-29).
 - [ ] Room EQ kiosk: screen off after N min with no audio (CamillaDSP Stalled / capture rate 0), back on when audio starts; works for any source, no Shield change.
-- [~] Shield sleep = Home + sleep without the Pi: own app `shield/sleephome` installed and enabled 2026-10-29; sleep test passed, also after a Shield restart. Check after real sleeps: Pi `wakes.log` `sleephome:` line says "was com.spocky.projengmenu..." (the app already went Home). After 2-3 clean nights, stop the Pi hook (remove the `/Going to sleep/ { system(hook ...) }` line in `pi/bin/shield-wakelog`).
+- [x] Shield setup done 2026-10-29: debloat, Projectivy as Home, Sleep Home app (tested, also after a restart). Restore after a factory reset: `shield/README.md`, `shield/restore.sh` (tested).
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
 - [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
 - [x] Bass slider on the Pi UI (low shelf under 80 Hz, -12..+6 dB), deployed to RAM 2026-10-27.
