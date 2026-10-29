@@ -153,7 +153,16 @@ left open (internal pull-ups). ID `1f 27 01`, status 0xB4 (528-byte pages). Two 
   DSP/MCU side (likely the DSP program in pages 0-189, the Dirac/preset data, preset names, and a
   device-unique string "27AcOcjkWu2SjYh" at 0x41fea0, possibly the Dirac licence ID). Do not erase
   it; resolder it unchanged. The UMIK-2 firmware must sit in the XMOS's own flash (an XUF part
-  has it inside) or in another chip. Next: read the XMOS chip marking.
+  has it inside) or in another chip.
+- Board photos 2026-10-29 (miniDSP 2x4 HD-V2 R1.0, Dec 2020): DSP = ADSP-21489 SHARC, codec
+  PCM3168A, XMOS marked U11692C20 (TQFP-128, likely XUF216 = flash inside). The AT45 sits on the
+  back (empty SOIC-8 pads) and is the SHARC's boot/preset flash. No external XMOS flash found.
+  2x7 header next to the SHARC (its JTAG), 2x4 pin header next to the XMOS (likely XMOS JTAG).
+- Plan: (1) resolder the AT45 unchanged; (2) try the XMOS DFU "revert to factory" request
+  (XMOS_DFU_REVERTFACTORY 0xF1, as `xmosdfu --revertfactory` in XMOS sw_usb_audio) from the PC
+  over USB: it erases the upgrade image, so the XMOS boots its factory image again (likely the
+  original miniDSP firmware). Needs the WinUSB driver on the DFU interface (Zadig, done by the user).
+  (3) Fallback: XMOS xTAG on the 2x4 header, read the internal flash, erase only the upgrade image.
 
 ## Git
 

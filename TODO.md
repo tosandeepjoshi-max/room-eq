@@ -11,7 +11,8 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] miniDSP flash backup: chip desoldered, read off-board with the Pico 2026-10-29 (two identical reads), `measurements/minidsp/at45_backup_2026-10-29.bin`.
 - [x] User: desolder the flash chip and wire it off-board to the Pico (done 2026-10-29).
 - [x] miniDSP: image analysed 2026-10-29: the AT45 holds DSP/preset data, not the XMOS firmware (no USB strings). Keep it unchanged.
-- [ ] User: read the full marking on the miniDSP's XMOS chip (e.g. XUF208-256-TQ64 = flash inside the chip) and look for any other 8-pin chip near it; photo is fine #you
+- [x] User: XMOS marking and board photos (2026-10-29): no external XMOS flash; flash is inside the XMOS.
+- [ ] miniDSP: after the AT45 is back, plug the miniDSP into the PC and try the XMOS DFU revert-to-factory request over USB (see CLAUDE.md).
 - [ ] User: resolder the AT45 unchanged (pin 1 at the board's marking) #you
 - [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
