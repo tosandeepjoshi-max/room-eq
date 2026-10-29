@@ -14,7 +14,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] User: XMOS marking and board photos (2026-10-29): no external XMOS flash; flash is inside the XMOS.
 - [ ] miniDSP: after the AT45 is back, plug the miniDSP into the PC and try the XMOS DFU revert-to-factory request over USB (see CLAUDE.md).
 - [x] User: resolder the AT45 unchanged (done 2026-10-29; no bridges, all legs beep, VCC-GND 170 ohm = board load)
-- [ ] User: clean the blob on the DSP's left row (legs ~7-8 from pin 1) with isopropyl; continuity check before power-up #you
+- [x] DSP left-row legs ~7-8 joined: user judges it a deliberate factory joint, left as is (2026-10-29)
 - [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
 - [ ] Shield sleep = Home + sleep without the Pi: today `pi/bin/shield-sleephome` (run by the Pi wake logger) does it and stops on a Pi reboot. Options: re-enable tvlauncher + tvrecommendations and turn on Projectivy's "Override current launcher", or an automation app on the Shield (screen off -> Home).
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
