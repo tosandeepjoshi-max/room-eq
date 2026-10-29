@@ -433,7 +433,7 @@ Restart Shield over ADB (2026-10-16):
   overlay). The PC key is accepted: `adb connect 192.168.110.211:5555` from the PC.
 
 Shield setup (debloat, Projectivy as the only Home, Sleep Home app, restore after a factory
-reset): see `shield/README.md` and `shield/restore.sh`. Done 2026-10-29.
+reset): moved to its own project `Projects/personal/shield` on 2026-10-29 (completed).
 
 ## Touchscreen kiosk
 

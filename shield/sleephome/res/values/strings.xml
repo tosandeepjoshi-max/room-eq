@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="description">Opens the home screen when the TV goes to sleep, so no app is left in front and wakes the TV later. Reads no screen content.</string>
-</resources>
