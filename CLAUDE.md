@@ -148,6 +148,12 @@ left open (internal pull-ups). ID `1f 27 01`, status 0xB4 (528-byte pages). Two 
 - Used: pages 0-189 (~100 KB, XMOS code, no readable strings), four 69-page blocks plus one page
   each at pages 400, 625, 826, 1028 (likely the 4 presets' data), pages 8184-8191 with the user's
   preset names ("default dirac new", "flat filters", "high mids"). Rest is 0xFF.
+- Analysis 2026-10-29: no USB strings at all (no "UMIK", "miniDSP", "XMOS", ASCII or UTF-16,
+  also bit-reversed or byte-swapped). So this chip is NOT the XMOS firmware flash: it holds the
+  DSP/MCU side (likely the DSP program in pages 0-189, the Dirac/preset data, preset names, and a
+  device-unique string "27AcOcjkWu2SjYh" at 0x41fea0, possibly the Dirac licence ID). Do not erase
+  it; resolder it unchanged. The UMIK-2 firmware must sit in the XMOS's own flash (an XUF part
+  has it inside) or in another chip. Next: read the XMOS chip marking.
 
 ## Git
 

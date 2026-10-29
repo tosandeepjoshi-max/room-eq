@@ -10,7 +10,9 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 
 - [x] miniDSP flash backup: chip desoldered, read off-board with the Pico 2026-10-29 (two identical reads), `measurements/minidsp/at45_backup_2026-10-29.bin`.
 - [x] User: desolder the flash chip and wire it off-board to the Pico (done 2026-10-29).
-- [ ] miniDSP: analyse the image (XMOS boot loader / factory / upgrade image layout in pages 0-189), find the UMIK-2 upgrade image, plan a write (writing not implemented yet).
+- [x] miniDSP: image analysed 2026-10-29: the AT45 holds DSP/preset data, not the XMOS firmware (no USB strings). Keep it unchanged.
+- [ ] User: read the full marking on the miniDSP's XMOS chip (e.g. XUF208-256-TQ64 = flash inside the chip) and look for any other 8-pin chip near it; photo is fine #you
+- [ ] User: resolder the AT45 unchanged (pin 1 at the board's marking) #you
 - [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
 - [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
