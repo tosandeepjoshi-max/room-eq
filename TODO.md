@@ -20,7 +20,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] DSP left-row legs ~7-8 joined: user judges it a deliberate factory joint, left as is (2026-10-29)
 - [x] Shield self-wake: found (app left in front at sleep) and fixed with the Sleep Home app; Pi wake logger no longer needed (2026-10-29).
 - [x] Room EQ kiosk: audio-aware screen: dimmed while audio plays, off after the set time with no audio and no touch, back dimmed when audio starts (2026-10-29).
-- [ ] User: save the audio-aware screen, color themes and the Room_curve preset rename on the SD card (overlay off, I redeploy and redo the rename, overlay on) #you
+- [~] User: save the audio-aware screen, color themes and the Room_curve preset rename on the SD card: saved 2026-10-29 (overlay off); turn the overlay on again #you
 - [x] Shield setup done 2026-10-29: debloat, Projectivy as Home, Sleep Home app (tested, also after a restart). Restore after a factory reset (now in Projects/personal/shield): `shield/README.md`, `shield/restore.sh` (tested).
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
 - [x] User: KEF volume test: answered by the user 2026-10-29 without a sweep: the sub does not fully follow the KEF volume. Turning up the KEF changes the bass balance differently from turning up the Shield remote; the user uses this on purpose to set the bass level. So any bass/sub level check must note both volumes. #you

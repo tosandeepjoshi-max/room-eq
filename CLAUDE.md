@@ -328,7 +328,8 @@ Screen sleep and brightness (2026-10-03):
   spectrum), gear > Colors. Sets the fader cap line, a fader bar from the track bottom up to the cap
   (`.ffill`), the level meters and the EQ curve (`:root[data-colors=...]` tokens). Spectrum colors
   each band's bar by frequency (red 20 Hz to violet 20 kHz). Preamp (cyan) and room (amber) cap
-  lines keep their colors. Deployed to RAM 2026-10-29 (overlay on); theme set to spectrum.
+  lines keep their colors. Saved on the SD card 2026-10-29 with the audio-aware screen, the
+  Room_curve rename and the no-cache index header; theme spectrum.
 
 How it works:
 - CamillaDSP client fix (2026-10-22): a call cancelled after sending (the
