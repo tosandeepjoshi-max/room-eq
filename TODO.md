@@ -28,7 +28,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Bass slider saved on the SD card (2026-10-27, overlay off).
 - [x] Overlay on again (2026-10-27); bass -5 dB and rew_v1 confirmed after reboot.
 - [ ] Optional: second filter round for 37/46 Hz after the bass level is set; try sub phase against the 105 Hz null.
-- [~] User: make the screen dim/off and Screen off button permanent: saved on the SD card 2026-10-29; turn the overlay on again #you
+- [x] User: make the screen dim/off and Screen off button permanent: saved on the SD card 2026-10-29 (with the JoshEQ DSP gadget name); overlay on again, checked after reboot #you
 - [ ] Pi heatsink and closed case (watch CPU temp, ~56 C open).
 - [x] Phone EQ page: sweep + UMIK-1 measurement and PEQ design in Chrome on Android (car tuning), exports for Poweramp EQ / Equalizer314 / Wavelet / CamillaDSP. Source `web/phone_eq.html`. Published: https://claude.ai/artifact/V94Xsx2MX7YdWrJaj4FXBM
 - [x] User: first real measurement with the phone, a recorder app and the UMIK-1 (car): done 2026-10-23 (split screen, 5 full sweeps); car_v1 normal/gentle/bass pushed to the phone.
