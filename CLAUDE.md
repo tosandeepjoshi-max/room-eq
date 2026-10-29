@@ -117,11 +117,31 @@ The user's old miniDSP (2x4 HD upgraded to DDRC-24 with Dirac) had UMIK-2
 firmware flashed onto its XMOS by mistake: it shows as UMIK-2 v2.06, VID 0x2752
 PID 0x002B. miniDSPUAC2Dfu fails at "Entering upgrade mode" (0xEE000003); the
 Toolbox loader sends the firmware with no reply; holding the board's reset
-button at power-up changes nothing. The XMOS flash is an Adesto AT45DB321E
-(SPI DataFlash, 3.3 V) next to the XMOS chip. Plan: with a CH341A plus 3.3 V
-adapter (ordered), read the flash twice as a backup, inspect it for a factory
-image plus the UMIK-2 upgrade image, and only then erase the upgrade image.
+button at power-up changes nothing. (Early belief, proven wrong 2026-10-29: the AT45DB321E is
+NOT the XMOS flash; it is the SHARC DSP's flash. The XMOS firmware is inside the XMOS chip.)
 Not needed for the Pi chain; its value is resale or a car install.
+
+Status 2026-10-29: XMOS still runs UMIK-2 2.06. DSP side intact, AT45 backed up and resoldered.
+Only route left: XMOS XTAG-4 on the 2x4 pin header next to the XMOS (JTAG), read the internal
+flash with xflash, look for a factory image. Ask miniDSP support as a parallel option.
+
+Tried and failed (do not repeat):
+
+| Date | What | Result |
+|---|---|---|
+| 10-03/05 | miniDSPUAC2Dfu with the correct 2x4 HD / DDRC-24 firmware, AMD and Intel PCs, rear USB 2.0 ports, after power cycles | "Entering upgrade mode", then TUSBAUDIO_GetDfuStatus 0xEE000003 (TIMEOUT); device detaches, never re-enumerates in DFU mode |
+| 10-05 | Hold the reset button during power-up (forum tip) | No change, still UMIK-2 |
+| 10-05 | miniDSP factory/Toolbox loader tool | Sends the firmware, no reply |
+| 10-05 | Pi as SPI programmer on the AT45 in-circuit (SOIC8 clip, flashrom), Pi-powered | All 0xFF, Pi undervoltage, back-feeds the board's 3.3 V rail. Never power the board from the Pi |
+| 10-05 | Same, board self-powered, wake-up command 0xAB, reset held | RDID still 0xFF; in-circuit read impossible |
+| 10-29 | AT45 desoldered, read off-board with the Pico (worked) | Holds DSP code, presets, Dirac data, not the XMOS firmware. Writing it cannot fix the USB side |
+| 10-29 | Board search for an external XMOS flash | None (only op-amps, codec, regulators, resistor arrays); XMOS has internal flash |
+| 10-29 | Driver API `TUSBAUDIO_StartDfuRevertToFactoryImage` | 0xEE000047 INVALID_INDEX |
+| 10-29 | Driver API `ClassVendorRequestOut`, XMOS revert 0xF1 and DFU detach, all argument combinations | REJECTED (driver blocks the DFU interface) or TIMEOUT; device unchanged after power cycle |
+| 10-29 | WinUSB via Zadig on the whole device + pyusb: DFU GETSTATUS / detach on interface 2 | Times out on a freshly powered device, then EP0 stalls. Every DFU request hangs (UMIK-2 audio core stuck on this hardware). USB route closed |
+
+Lesson: in Zadig pick the entry whose current driver is `miniDSPUAC2` (whole device), not
+"USB Input Device (Interface 3)" (the HID part).
 
 2026-10-05 attempt with the Pi as programmer (flashrom linux_spi, SOIC8 clip):
 - The clip's ribbon does not follow chip numbering. Measured map, IDC holes face
@@ -158,7 +178,7 @@ left open (internal pull-ups). ID `1f 27 01`, status 0xB4 (528-byte pages). Two 
   PCM3168A, XMOS marked U11692C20 (TQFP-128, likely XUF216 = flash inside). The AT45 sits on the
   back (empty SOIC-8 pads) and is the SHARC's boot/preset flash. No external XMOS flash found.
   2x7 header next to the SHARC (its JTAG), 2x4 pin header next to the XMOS (likely XMOS JTAG).
-- Plan: (1) resolder the AT45 unchanged; (2) try the XMOS DFU "revert to factory" request
+- Plan (steps 1-2 done, both failed or done, see table above): (1) resolder the AT45 unchanged; (2) try the XMOS DFU "revert to factory" request
   (XMOS_DFU_REVERTFACTORY 0xF1, as `xmosdfu --revertfactory` in XMOS sw_usb_audio) from the PC
   over USB: it erases the upgrade image, so the XMOS boots its factory image again (likely the
   original miniDSP firmware). Needs the WinUSB driver on the DFU interface (Zadig, done by the user).
