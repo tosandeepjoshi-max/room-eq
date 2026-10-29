@@ -420,6 +420,17 @@ Shield debloat (2026-10-27, Android 11, from the PC with `pm uninstall --user 0`
   sends KEYCODE_SLEEP. Each run logs a `sleephome:` line in `wakes.log`. Works only while the
   Pi and the logger run. Other ways: re-enable tvlauncher + tvrecommendations and use
   Projectivy's "Override current launcher", or an automation app on the Shield.
+- Sleep Home app (2026-10-29, user's choice; the user does not want Google recommendations back):
+  `shield/sleephome/`, package `com.joshi.sleephome`, an accessibility service that opens Home on
+  each SCREEN_OFF (an accessibility service may start activities from the background on Android
+  11, and the system restarts it at boot). Log tag `SleepHome`. Build:
+  `.venv\Scripts\python shield\sleephome\build.py` (JDK 17 from winget, SDK in
+  `%LOCALAPPDATA%\Android\Sdk`: build-tools 34.0.0 + android-30; signed with
+  `~/.android/debug.keystore`). Installed from the Pi (`adb install -r`; the PC key was
+  unauthorized that day) and enabled by adding
+  `com.joshi.sleephome/com.joshi.sleephome.SleepHomeService` to `enabled_accessibility_services`
+  after Projectivy's entry (colon-separated; keep Projectivy's). The Pi hook stays as a backup
+  until the app is proven.
 
 ## Touchscreen kiosk
 
