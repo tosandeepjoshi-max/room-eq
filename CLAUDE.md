@@ -231,6 +231,9 @@ left open (internal pull-ups). ID `1f 27 01`, status 0xB4 (528-byte pages). Two 
   nothing). Settings 2026-10-03: delay/phase 0, crossover max (120), LPF slope
   12 dB, PEQ off, bass extension Low-HT, volume set by ear (user prefers subtle,
   textured bass). Phase 0 beat 90/180 in REW (smooth 75-95 Hz, no notch).
+- Volume and sub (user, 2026-10-29): the sub does not fully follow the KEF's own volume. The
+  Shield remote (digital, before the KEF) and the KEF volume change the speaker/sub balance
+  differently; the user uses this to set the bass level. Note both volumes with any bass measurement.
 
 ## Audio chain
 

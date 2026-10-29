@@ -22,7 +22,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [ ] Room EQ kiosk: screen off after N min with no audio (CamillaDSP Stalled / capture rate 0), back on when audio starts; works for any source, no Shield change.
 - [x] Shield setup done 2026-10-29: debloat, Projectivy as Home, Sleep Home app (tested, also after a restart). Restore after a factory reset (now in Projects/personal/shield): `shield/README.md`, `shield/restore.sh` (tested).
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
-- [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
+- [x] User: KEF volume test: answered by the user 2026-10-29 without a sweep: the sub does not fully follow the KEF volume. Turning up the KEF changes the bass balance differently from turning up the Shield remote; the user uses this on purpose to set the bass level. So any bass/sub level check must note both volumes. #you
 - [x] Bass slider on the Pi UI (low shelf under 80 Hz, -12..+6 dB), deployed to RAM 2026-10-27.
 - [x] Bass slider set to -5 dB by the user (2026-10-27).
 - [x] Bass slider saved on the SD card (2026-10-27, overlay off).
