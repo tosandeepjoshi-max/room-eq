@@ -44,7 +44,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] Save the startup-mode fix on the SD card: saved 2026-10-16; overlay on, real reboot at 01:22 started in Vocal.
 - [x] Fix: audio not restarting after a KEF dropout (CamillaDSP replies out of step, auto-recover blind). Deployed to RAM 2026-10-22.
 - [x] CamillaDSP reply fix saved on the SD card (2026-10-27, overlay was off).
-- [ ] User: turn the overlay on again (off since 2026-10-27) #you
+- [x] User: turn the overlay on again (off since 2026-10-27): on, checked 2026-10-29 #you
 - [x] Set up Restart Shield on the Pi: adb installed, key accepted on the Shield, `shield_mac` saved, code on the SD card; real restart tested 2026-10-16 (Shield back in ~45 s, key still accepted).
 
 - [x] 1. Compact layout on the 800 x 480 screen: done 2026-10-03 (new fader
