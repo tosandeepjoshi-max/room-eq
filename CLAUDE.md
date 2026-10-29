@@ -276,8 +276,8 @@ Screen sleep and brightness (2026-10-03):
   `DIM_PCT` (8 % = 20 of 255) and a transparent cover swallows the waking touch. Off after
   `sleep_minutes` (default now 10). Moon button in the header: on the kiosk it goes dark at once;
   on a phone it sends `screen_off`, which the server broadcasts, and the kiosk page goes dark.
-  Settings: "Dim after" and "Off after". Deployed 2026-10-29 with the overlay ON (RAM only), user
-  settings sleep 10 / dim 2; tested on the Pi: dim 20, awake 255, screen_off 0.
+  Settings: "Dim after" and "Off after". Tested on the Pi: dim 20, awake 255, screen_off 0.
+  Saved on the SD card 2026-10-29 (overlay off): code + settings sleep 10 / dim 2.
 
 How it works:
 - CamillaDSP client fix (2026-10-22): a call cancelled after sending (the
