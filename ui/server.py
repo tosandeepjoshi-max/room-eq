@@ -967,7 +967,11 @@ async def upload_handler(request):
 
 
 async def index(request):
-    return web.FileResponse(STATIC_DIR / "index.html")
+    # no-cache: browsers (the kiosk too) must check for a new page each time, or a deployed
+    # index.html shows up only after their heuristic cache expires.
+    resp = web.FileResponse(STATIC_DIR / "index.html")
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 async def on_startup(app):
