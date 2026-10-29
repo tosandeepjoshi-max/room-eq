@@ -5,11 +5,12 @@
 
 ## Open items
 
-Paused 2026-10-03. Next: miniDSP flash backup with the Pico (scripts/minidsp_flash.py); the
+Paused 2026-10-03. Next: analyse the miniDSP flash backup (taken 2026-10-29); the
 user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 
-- [~] miniDSP flash backup with a Pi Pico + grab clips: `scripts/minidsp_flash.py` (firmware, install, probe, id, read x2, compare). MicroPython 1.29.0 in `pico/firmware/` (not in git). See CLAUDE.md, "miniDSP 2x4 HD / DDRC-24".
-- [ ] User: desolder the flash chip (ChipQuik, 300-320 C; photo + pin 1 first), put it on a SOIC-8 adapter, wire it off-board to the Pico: chip 2 SCK-GP2, 1 SI-GP3, 8 SO-GP4, 4 CS-GP5, 6 VCC + 3 RESET + 5 WP to Pico 3V3 OUT, 7 GND-GND (decided 2026-10-28, replaces the in-circuit clip attempt) #you
+- [x] miniDSP flash backup: chip desoldered, read off-board with the Pico 2026-10-29 (two identical reads), `measurements/minidsp/at45_backup_2026-10-29.bin`.
+- [x] User: desolder the flash chip and wire it off-board to the Pico (done 2026-10-29).
+- [ ] miniDSP: analyse the image (XMOS boot loader / factory / upgrade image layout in pages 0-189), find the UMIK-2 upgrade image, plan a write (writing not implemented yet).
 - [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
 - [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you

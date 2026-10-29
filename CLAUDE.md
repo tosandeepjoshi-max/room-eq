@@ -141,6 +141,14 @@ Not needed for the Pi chain; its value is resale or a car install.
   signal tooth has no contact. Options: desolder the chip and read it off-board,
   or ship the board to miniDSP.
 
+2026-10-29 off-board read (chip desoldered, in a SOIC-8 socket adapter, wired to the Pico;
+`scripts/minidsp_flash.py`): chip VCC (adapter wire gray) on Pico 3V3 OUT pin 36, RESET and WP
+left open (internal pull-ups). ID `1f 27 01`, status 0xB4 (528-byte pages). Two reads identical:
+`measurements/minidsp/at45_backup_2026-10-29.bin` (4,325,376 bytes = 8192 x 528).
+- Used: pages 0-189 (~100 KB, XMOS code, no readable strings), four 69-page blocks plus one page
+  each at pages 400, 625, 826, 1028 (likely the 4 presets' data), pages 8184-8191 with the user's
+  preset names ("default dirac new", "flat filters", "high mids"). Rest is 0xFF.
+
 ## Git
 
 - GitHub: `git@github.com:tosandeepjoshi-max/room-eq.git` (private), branch `main`.
