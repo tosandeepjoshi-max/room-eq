@@ -16,7 +16,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [x] User: resolder the AT45 unchanged (done 2026-10-29; no bridges, all legs beep, VCC-GND 170 ohm = board load)
 - [x] DSP left-row legs ~7-8 joined: user judges it a deliberate factory joint, left as is (2026-10-29)
 - [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
-- [~] Shield sleep = Home + sleep without the Pi: own app `shield/sleephome` installed and enabled 2026-10-29. Check after the first real sleep: Pi `wakes.log` `sleephome:` line says "was com.spocky.projengmenu..." (the app already went Home). After 2-3 clean nights, stop the Pi hook (remove the `/Going to sleep/ { system(hook ...) }` line in `pi/bin/shield-wakelog`).
+- [~] Shield sleep = Home + sleep without the Pi: own app `shield/sleephome` installed and enabled 2026-10-29; sleep test passed, also after a Shield restart. Check after real sleeps: Pi `wakes.log` `sleephome:` line says "was com.spocky.projengmenu..." (the app already went Home). After 2-3 clean nights, stop the Pi hook (remove the `/Going to sleep/ { system(hook ...) }` line in `pi/bin/shield-wakelog`).
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
 - [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
 - [x] Bass slider on the Pi UI (low shelf under 80 Hz, -12..+6 dB), deployed to RAM 2026-10-27.

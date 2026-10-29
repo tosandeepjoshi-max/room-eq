@@ -431,6 +431,10 @@ Shield debloat (2026-10-27, Android 11, from the PC with `pm uninstall --user 0`
   `com.joshi.sleephome/com.joshi.sleephome.SleepHomeService` to `enabled_accessibility_services`
   after Projectivy's entry (colon-separated; keep Projectivy's). The Pi hook stays as a backup
   until the app is proven.
+  Tested 2026-10-29 with YouTube in front, before and after a Shield restart: SCREEN_OFF comes
+  ~2-3 s after "Going to sleep", then the app starts Home (`START u0 ... HOME ... from uid 10038`,
+  `SleepHome: screen off: Home opened`); the Shield stayed asleep. Both accessibility services
+  bound by themselves after the restart.
 
 ## Touchscreen kiosk
 
