@@ -13,6 +13,7 @@
 :root{
   --bg:#1b2029; --panel-rgb:35,42,53; --alpha:.9; --raised:#2c3542; --line:#3a4555; --sunk:#1c232d;
   --plot:#161b22; --text:#e8edf3; --muted:#9aa6b5; --coral:#ff7a72; --cyan:#3ccfe0;
+  --fline:#f5f7fa; --ffill:rgba(245,247,250,.32); --mpk:#6d7a8c; --mrm:#b9c3cf; --curve:#f5f7fa;
   --sans:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'DejaVu Sans Mono',monospace;
 }
@@ -77,7 +78,20 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;pa
 .tick{position:absolute;left:6px;right:6px;height:1px;background:linear-gradient(90deg,#4a5668 0 10px,transparent 10px calc(100% - 10px),#4a5668 calc(100% - 10px))}
 .tick.zero{background:linear-gradient(90deg,#8794a6 0 13px,transparent 13px calc(100% - 13px),#8794a6 calc(100% - 13px))}
 .fcap{position:absolute;left:50%;width:38px;height:24px;margin:-12px 0 0 -19px;border-radius:4px;background:linear-gradient(#5d6878,#3b4553 46%,#2a313c 54%,#495362);box-shadow:0 4px 8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.18);pointer-events:none}
-.fcap::after{content:"";position:absolute;left:4px;right:4px;top:50%;height:2px;margin-top:-1px;background:#f5f7fa;border-radius:1px}
+.fcap::after{content:"";position:absolute;left:4px;right:4px;top:50%;height:2px;margin-top:-1px;background:var(--fline);border-radius:1px}
+/* colored bar from the bottom of the track up to the cap; the Spectrum theme colors each band by its frequency */
+.ffill{position:absolute;left:50%;width:6px;margin-left:-3px;border-radius:3px;background:var(--band,var(--ffill));pointer-events:none}
+.strip.off .ffill{opacity:.35}
+:root[data-colors=coral]{--fline:#ff7a72;--ffill:rgba(255,122,114,.55);--mpk:#8a4a46;--mrm:#ff7a72;--curve:#ff7a72}
+:root[data-colors=cyan]{--fline:#3ccfe0;--ffill:rgba(60,207,224,.55);--mpk:#23727c;--mrm:#3ccfe0;--curve:#3ccfe0}
+:root[data-colors=green]{--fline:#4cc38a;--ffill:rgba(76,195,138,.55);--mpk:#2b6e4e;--mrm:#4cc38a;--curve:#4cc38a}
+:root[data-colors=amber]{--fline:#f2b440;--ffill:rgba(242,180,64,.55);--mpk:#85642a;--mrm:#f2b440;--curve:#f2b440}
+:root[data-colors=violet]{--fline:#a78bfa;--ffill:rgba(167,139,250,.55);--mpk:#5f4f96;--mrm:#a78bfa;--curve:#a78bfa}
+:root[data-colors=spectrum]{--fline:#f5f7fa;--ffill:rgba(245,247,250,.32);--mpk:#2b6e4e;--mrm:#4cc38a;--curve:#f5f7fa}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.swatch{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--text);font-size:11px;cursor:pointer}
+.swatch i{width:30px;height:16px;border-radius:4px}
+.swatch[aria-pressed=true]{border-color:var(--text);box-shadow:inset 0 0 0 1px var(--text)}
 .strip.sel .fcap::after{background:var(--coral)}
 .strip.pre .fcap::after{background:var(--cyan)}
 .strip.room{background:rgba(232,176,74,.05)}
@@ -135,8 +149,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
 .bars{flex:1;display:grid;grid-template-columns:14px 14px 1fr 14px 14px;gap:6px;padding:0 8px;min-height:0}
 .bar{position:relative;background:var(--sunk);border-radius:3px;overflow:hidden}
 .bar .pk,.bar .rm{position:absolute;left:0;right:0;bottom:0;height:0}
-.bar .pk{background:#6d7a8c}
-.bar .rm{background:#b9c3cf}
+.bar .pk{background:var(--mpk)}
+.bar .rm{background:var(--mrm)}
 .bar.clip .pk{background:var(--coral)}
 .scale{display:flex;flex-direction:column;justify-content:space-between;align-items:center;font:10px var(--mono);color:var(--muted)}
 .io{display:flex;justify-content:space-between;padding:0 8px;font-size:11px;color:var(--muted);font-weight:700}
@@ -304,7 +318,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
             <g stroke="#262e38" stroke-width="1" id="grid"></g>
             <line x1="0" y1="130" x2="1000" y2="130" stroke="#3a4555" stroke-width="1" vector-effect="non-scaling-stroke"/>
             <path id="cfill" fill="rgba(255,122,114,.45)"/>
-            <path id="cline" fill="none" stroke="#f5f7fa" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+            <path id="cline" fill="none" style="stroke:var(--curve)" stroke="#f5f7fa" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
           </svg>
           <div class="marker" id="marker" hidden></div>
           <div id="nodes"></div>
@@ -358,7 +372,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   </div>
   <div class="oprow"><label for="dimsel"><span>Dim after</span></label><select id="dimsel" class="selbox"></select></div>
   <div class="oprow"><label for="sleepsel"><span>Off after</span></label><select id="sleepsel" class="selbox"></select></div>
-  <p class="hint" style="margin:0">Counted from the last touch on the touchscreen. The moon button turns it off at once, also from a phone. The first touch just wakes it.</p>
+  <p class="hint" style="margin:0">Dims after the set time without a touch. While audio plays it stays dimmed; it goes off once nothing has played and nobody has touched it for the "Off after" time. The moon button turns it off at once, also from a phone. The first touch just wakes it.</p>
   <div id="shieldsec" hidden>
   <h3>Shield</h3>
   <button class="popbtn" type="button" id="shieldbtn">Restart Shield</button>
@@ -367,6 +381,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;bac
   <h3>Schedule</h3>
   <div class="oprow"><span>Auto mode switch</span><button class="sw" type="button" role="switch" id="automode" aria-checked="true" aria-label="Auto mode switch"></button></div>
   <p class="hint" style="margin:0" id="schedhint"></p>
+  <h3>Colors</h3>
+  <div class="swatches" id="swatches"></div>
   <h3>Background</h3>
   <div class="tiles" id="tiles">
     <button class="tile" type="button" data-bg="carbon"><i style="background:repeating-linear-gradient(135deg,#1b2029 0 6px,#1f2530 6px 12px)"></i>Carbon</button>
@@ -416,11 +432,11 @@ function connect() {
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     if (msg.type === 'state') { if (dragging) pending = msg; else setModel(msg); }
-    else if (msg.type === 'levels') drawLevels(msg);
+    else if (msg.type === 'levels') { drawLevels(msg); noteAudio(msg); }
     else if (msg.type === 'status') { status = msg; drawStatus(); }
     else if (msg.type === 'notice') toast(msg.text, msg.ok, msg.action);
     else if (msg.type === 'selected') { selected = msg.name; detailKey = ''; if (model) render(); }
-    else if (msg.type === 'screen_off' && KIOSK && !asleep) goSleep();
+    else if (msg.type === 'screen_off' && KIOSK) { manualOff = true; if (!asleep) goSleep(); }
   };
 }
 function send(obj) {
@@ -441,7 +457,7 @@ function startDemo() {
     { name: 'room 67', ...bq('Peaking', 66.7, -6.9, { q: 5 }) },
   ];
   setModel({ type: 'state', config_name: 'room_eq.yml', presets: ['movie.yml', 'room_eq.yml'], filters, samplerate: 192000,
-    mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, bass_db: 0, bass_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 10, dim_minutes: 2, auto_mode: true },
+    mode: 'room', bypass: false, lowcut: false, lowcut_freq: 80, bass_db: 0, bass_freq: 80, dirty: false, can_undo: false, settings: { background: 'carbon', opacity: 0.9, brightness: 100, sleep_minutes: 10, dim_minutes: 2, auto_mode: true, color_theme: 'classic' },
     mode_schedule: [{ time: '23:00', mode: 'vocal' }, { time: '09:00', mode: 'room' }],
     sleep_choices: [0, 1, 2, 5, 10, 15, 30, 60], dim_choices: [0, 1, 2, 5], has_backlight: true, screen_on: true, auto_preamp: true, auto_preamp_db: 0, can_restart_shield: true });
   status = { state: 'Running', capture_rate: 192000, temp: 56, load: 12, clipped: 0 }; drawStatus();
@@ -655,7 +671,7 @@ function stripHtml(f) {
   if (hasGain(f)) for (let v = lo; v <= hi; v += step) ticks += `<i class="tick${v === 0 ? ' zero' : ''}" style="top:${capTop((hi - v) / (hi - lo))}"></i>`;
   return `<div class="strip${f.type === 'Gain' ? ' pre' : ''}${isRoom(f) ? ' room' : ''}${autoPre(f) ? ' auto' : ''}${f.enabled ? '' : ' off'}" data-name="${esc(f.name)}">
       <span class="sval"></span>
-      <div class="fader${hasGain(f) ? '' : ' none'}"${hasGain(f) ? ` role="slider" tabindex="0" aria-label="${esc(f.name)} gain" aria-valuemin="${lo}" aria-valuemax="${hi}"` : ''}>${ticks}${hasGain(f) ? '<div class="fcap"></div>' : ''}</div>
+      <div class="fader${hasGain(f) ? '' : ' none'}"${hasGain(f) ? ` role="slider" tabindex="0" aria-label="${esc(f.name)} gain" aria-valuemin="${lo}" aria-valuemax="${hi}"` : ''}>${ticks}${hasGain(f) ? '<div class="ffill"></div><div class="fcap"></div>' : ''}</div>
       <span class="sname">${esc(isRoom(f) ? f.name.replace(/^room\s*/i, '') : f.name)}</span><span class="sfreq"></span>
       ${f.type === 'Gain' ? '<span class="bulb" aria-hidden="true"></span>'
         : `<button class="bulb" type="button" data-toggle="${esc(f.name)}" aria-pressed="${f.enabled}" aria-label="${esc(f.name)} ${f.enabled ? 'on' : 'off'}">${BULB}</button>`}
@@ -715,7 +731,13 @@ function updateMixer() {
     const cap = el.querySelector('.fcap');
     if (cap) {
       const [lo, hi] = gainRange(f);
-      cap.style.top = capTop((hi - clamp(g, lo, hi)) / (hi - lo));
+      const cf = (hi - clamp(g, lo, hi)) / (hi - lo);
+      cap.style.top = capTop(cf);
+      const fill = el.querySelector('.ffill');
+      fill.style.top = capTop(cf); fill.style.height = `calc((100% - 20px) * ${1 - cf})`;   // bar from the bottom up to the cap
+      // Spectrum theme: hue runs red (20 Hz) to violet (20 kHz) by the band's frequency
+      const hue = hasFreq(f) && f.type !== 'Gain' ? Math.round(clamp(Math.log(p.freq / 20) / Math.log(1000), 0, 1) * 280) : null;
+      fill.style.setProperty('--band', model.settings && model.settings.color_theme === 'spectrum' && hue != null ? `hsla(${hue},85%,60%,.75)` : '');
       const fd = el.querySelector('.fader');
       fd.setAttribute('aria-valuenow', g); fd.setAttribute('aria-valuetext', fmtDb(g) + ' dB');
     }
@@ -861,6 +883,12 @@ function drawStatus() {
 }
 
 /* ---------- appearance ---------- */
+// Color themes for the fader bars, fader caps, level meters and EQ curve: [label, swatch look]
+const COLOR_THEMES = {
+  classic: ['Classic', '#d6dde6'], coral: ['Coral', '#ff7a72'], cyan: ['Cyan', '#3ccfe0'], green: ['Green', '#4cc38a'],
+  amber: ['Amber', '#f2b440'], violet: ['Violet', '#a78bfa'],
+  spectrum: ['Spectrum', 'linear-gradient(90deg,hsl(0,85%,60%),hsl(60,85%,60%),hsl(140,85%,60%),hsl(200,85%,60%),hsl(280,85%,60%))'],
+};
 function applySettings() {
   const s = model.settings || {};
   document.body.className = 'bg-' + (s.background === 'custom' && !s.background_file ? 'carbon' : s.background || 'carbon');
@@ -869,6 +897,11 @@ function applySettings() {
   if (document.activeElement !== $('opacity')) $('opacity').value = Math.round((s.opacity ?? 0.9) * 100);
   $('opval').textContent = Math.round((s.opacity ?? 0.9) * 100) + '%';
   document.querySelectorAll('.tile').forEach((t) => t.setAttribute('aria-pressed', t.dataset.bg === s.background));
+  const theme = COLOR_THEMES[s.color_theme] ? s.color_theme : 'classic';
+  if (theme === 'classic') delete document.documentElement.dataset.colors; else document.documentElement.dataset.colors = theme;
+  if (!$('swatches').children.length) $('swatches').innerHTML = Object.entries(COLOR_THEMES).map(([k, [label, look]]) =>
+    `<button class="swatch" type="button" data-color="${k}"><i style="background:${look}"></i>${label}</button>`).join('');
+  $('swatches').querySelectorAll('.swatch').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.color === theme)));
   const ct = $('customtile').querySelector('i');
   if (s.background_file) { ct.style.backgroundImage = `url("/uploads/${encodeURIComponent(s.background_file)}")`; ct.innerHTML = ''; $('customlabel').textContent = 'Photo'; }
   else if (!ct.innerHTML) { ct.style.backgroundImage = ''; ct.innerHTML = PLUS; $('customlabel').textContent = 'Upload'; }
@@ -948,34 +981,40 @@ $('bgfile').addEventListener('change', (e) => { if (e.target.files[0]) upload('b
 /* ---------- screen sleep (touchscreen only) ---------- */
 // The kiosk browser on the Pi opens localhost; phones use the Pi's name, so they never sleep.
 const KIOSK = ['localhost', '127.0.0.1'].includes(location.hostname);
-// Stages: awake -> dimmed (backlight low, page still visible) -> asleep (backlight off, black cover).
-let asleep = false, dimmed = false, idleTimer = null, dimTimer = null, armedFor = null;
-function armIdle() {
-  clearTimeout(idleTimer); clearTimeout(dimTimer);
-  const s = (model && model.settings) || {};
-  const min = s.sleep_minutes || 0, dim = s.dim_minutes || 0;
-  armedFor = min + '/' + dim;
-  if (!KIOSK || asleep) return;
-  if (min) idleTimer = setTimeout(goSleep, min * 60000);
-  if (dim && !dimmed && (!min || dim < min)) dimTimer = setTimeout(goDim, dim * 60000);
+// Stages: awake -> dimmed (backlight low, page visible) -> off (backlight off, black cover).
+// A touch wakes it fully. Audio arriving keeps it dimmed instead of off, and brings it back dimmed
+// after a silent spell. The moon button turns it off until the next touch, whatever plays.
+const AUDIO_DB = -60;                          // input peak above this counts as audio playing
+let asleep = false, dimmed = false, manualOff = false;
+let lastTouch = Date.now(), lastAudio = 0;
+function noteAudio(m) {
+  const pk = m.capture_peak || [];
+  if (pk.some((v) => v != null && v > AUDIO_DB)) lastAudio = Date.now();
 }
+function screenTick() {
+  if (!KIOSK || !model || dragging) return;
+  const s = model.settings || {};
+  const offMs = (s.sleep_minutes || 0) * 60000, dimMs = (s.dim_minutes || 0) * 60000;
+  const now = Date.now(), audio = now - lastAudio < 3000;
+  const idle = now - lastTouch, quiet = now - Math.max(lastTouch, lastAudio);
+  if (manualOff || (offMs && quiet >= offMs)) { if (!asleep) goSleep(); return; }
+  // Not off: dimmed once the touch idle time passes, or when audio wakes a dark screen.
+  if ((dimMs && idle >= dimMs) || (asleep && audio)) { if (!dimmed) goDim(); }
+}
+setInterval(screenTick, 1000);
 function goDim() {
-  if (dragging) { armIdle(); return; }
-  dimmed = true;
+  asleep = false; dimmed = true;
   $('sleep').classList.add('show', 'dim');       // transparent cover: catches the waking touch
   send({ cmd: 'screen', on: true, dim: true });
 }
 function goSleep() {
-  if (dragging) { armIdle(); return; }
-  clearTimeout(idleTimer); clearTimeout(dimTimer);
   asleep = true; dimmed = false; togglePop(false);
   $('sleep').classList.remove('dim'); $('sleep').classList.add('show');
   send({ cmd: 'screen', on: false });
 }
 function wake() {
-  asleep = false; dimmed = false;
+  asleep = false; dimmed = false; manualOff = false; lastTouch = Date.now();
   send({ cmd: 'screen', on: true, dim: false });
-  armIdle();
 }
 // The waking touch is swallowed: the cover stays until the finger lifts, so nothing underneath gets pressed.
 $('sleep').addEventListener('pointerdown', (e) => {
@@ -984,12 +1023,12 @@ $('sleep').addEventListener('pointerdown', (e) => {
 });
 const uncover = () => setTimeout(() => { if (!asleep && !dimmed) $('sleep').classList.remove('show', 'dim'); }, 350);
 $('sleep').addEventListener('pointerup', uncover); $('sleep').addEventListener('pointercancel', uncover);
-['pointerdown', 'keydown', 'wheel'].forEach((t) => document.addEventListener(t, () => { if (!asleep && !dimmed) armIdle(); }, true));
+['pointerdown', 'keydown', 'wheel'].forEach((t) => document.addEventListener(t, () => { if (!asleep && !dimmed) lastTouch = Date.now(); }, true));
 document.addEventListener('keydown', () => { if (asleep || dimmed) { wake(); $('sleep').classList.remove('show', 'dim'); } }, true);
 // Moon button: the touchscreen goes dark now. On a phone it asks the server to tell the touchscreen.
 $('screenoff').addEventListener('click', (e) => {
   e.stopPropagation();
-  if (KIOSK) setTimeout(goSleep, 300);           // after the finger lifts, so the release does not wake it
+  if (KIOSK) setTimeout(() => { manualOff = true; goSleep(); }, 300);   // after the finger lifts
   else { send({ cmd: 'screen_off' }); toast('Touchscreen off', true); }
 });
 function applyScreenSettings() {
@@ -1006,7 +1045,6 @@ function applyScreenSettings() {
   if ($('dimsel').dataset.opts !== dopts) { $('dimsel').innerHTML = dopts; $('dimsel').dataset.opts = dopts; }
   $('dimsel').value = s.dim_minutes ?? 0;
   $('screenoff').hidden = !model.has_backlight;
-  if (armedFor !== (s.sleep_minutes || 0) + '/' + (s.dim_minutes || 0)) armIdle();
   $('automode').setAttribute('aria-checked', String(s.auto_mode !== false));
   $('shieldsec').hidden = !model.can_restart_shield;
   $('shieldbtn').disabled = !!model.restarting_shield;
@@ -1026,6 +1064,10 @@ $('bright').addEventListener('change', (e) => send({ cmd: 'brightness', value: N
 $('shieldbtn').addEventListener('click', () => { if (confirm('Restart the Shield? Playback stops for about a minute.')) send({ cmd: 'restart_shield' }); });
 $('automode').addEventListener('click', () => send({ cmd: 'settings', values: { auto_mode: !(model.settings && model.settings.auto_mode !== false) } }));
 $('sleepsel').addEventListener('change', (e) => send({ cmd: 'settings', values: { sleep_minutes: Number(e.target.value) } }));
+$('swatches').addEventListener('click', (e) => {
+  const b = e.target.closest('.swatch'); if (!b) return;
+  send({ cmd: 'settings', values: { color_theme: b.dataset.color } });
+});
 $('dimsel').addEventListener('change', (e) => send({ cmd: 'settings', values: { dim_minutes: Number(e.target.value) } }));
 
 buildGrid();

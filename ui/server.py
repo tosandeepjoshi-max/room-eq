@@ -57,6 +57,7 @@ BACKLIGHT_DIR = os.environ.get("ROOMEQ_BACKLIGHT") or next(iter(sorted(Path("/sy
 SLEEP_CHOICES = (0, 1, 2, 5, 10, 15, 30, 60)   # minutes; 0 = never
 DIM_CHOICES = (0, 1, 2, 5)                      # minutes of no touch before the screen dims; 0 = never
 DIM_PCT = 8                                     # dimmed backlight, percent of maximum
+COLOR_THEMES = ("classic", "coral", "cyan", "green", "amber", "violet", "spectrum")   # fader and meter colors
 # Resets the USB gadget link to the Shield (stop camilladsp, reload g_audio, start camilladsp).
 # Needs a root-owned /usr/local/bin/roomeq-reconnect and a sudoers rule allowing it without a password.
 RECONNECT_CMD = ["sudo", "-n", "/usr/local/bin/roomeq-reconnect"]
@@ -91,6 +92,7 @@ DEFAULT_SETTINGS = {
     "brightness": 100,           # touchscreen backlight, percent (10-100)
     "sleep_minutes": 10,         # touchscreen goes dark after this idle time; 0 = never
     "dim_minutes": 2,            # touchscreen dims after this idle time (before it goes dark); 0 = never
+    "color_theme": "classic",    # fader bars, caps, meters and curve; one of COLOR_THEMES
     "disabled": {},              # config path -> list of filter names switched off
     "mode_tones": copy.deepcopy(DEFAULT_MODE_TONES),   # mode -> {tone fader name: gain dB}
     "auto_mode": True,           # follow MODE_SCHEDULE
@@ -492,7 +494,7 @@ class App:
             "can_undo": bool(self.history),
             "settings": {k: self.settings[k] for k in
                          ("background", "background_file", "logo_file", "opacity",
-                          "brightness", "sleep_minutes", "dim_minutes", "auto_preamp", "auto_mode")},
+                          "brightness", "sleep_minutes", "dim_minutes", "color_theme", "auto_preamp", "auto_mode")},
             "mode_schedule": [{"time": f"{h:02d}:{m:02d}", "mode": mode} for h, m, mode in MODE_SCHEDULE],
             "sleep_choices": SLEEP_CHOICES,
             "dim_choices": DIM_CHOICES,
@@ -654,6 +656,8 @@ class App:
                     self.settings[k] = msg["values"][k]
             if int(msg.get("values", {}).get("sleep_minutes", -1)) in SLEEP_CHOICES:
                 self.settings["sleep_minutes"] = int(msg["values"]["sleep_minutes"])
+            if msg.get("values", {}).get("color_theme") in COLOR_THEMES:
+                self.settings["color_theme"] = msg["values"]["color_theme"]
             if int(msg.get("values", {}).get("dim_minutes", -1)) in DIM_CHOICES:
                 self.settings["dim_minutes"] = int(msg["values"]["dim_minutes"])
             if "auto_mode" in msg.get("values", {}):

@@ -316,6 +316,15 @@ Screen sleep and brightness (2026-10-03):
   on a phone it sends `screen_off`, which the server broadcasts, and the kiosk page goes dark.
   Settings: "Dim after" and "Off after". Tested on the Pi: dim 20, awake 255, screen_off 0.
   Saved on the SD card 2026-10-29 (overlay off): code + settings sleep 10 / dim 2.
+- Audio-aware screen (2026-10-29): the kiosk page checks once a second (`screenTick`). Input peak
+  above -60 dBFS (`AUDIO_DB`, from the `levels` messages) counts as audio. Dimmed after `dim_minutes`
+  without a touch; off only when there was neither a touch nor audio for `sleep_minutes`; audio
+  brings an off screen back dimmed. The moon button (`manualOff`) keeps it off until a touch.
+- Color themes (2026-10-29): setting `color_theme` (classic, coral, cyan, green, amber, violet,
+  spectrum), gear > Colors. Sets the fader cap line, a fader bar from the track bottom up to the cap
+  (`.ffill`), the level meters and the EQ curve (`:root[data-colors=...]` tokens). Spectrum colors
+  each band's bar by frequency (red 20 Hz to violet 20 kHz). Preamp (cyan) and room (amber) cap
+  lines keep their colors. Deployed to RAM 2026-10-29 (overlay on); theme set to spectrum.
 
 How it works:
 - CamillaDSP client fix (2026-10-22): a call cancelled after sending (the
