@@ -18,7 +18,7 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
 `C:\Users\joshi\Projects\personal\room-eq\` (on the Pi the UI lives in `~/roomeq-ui/`):
 
 - `ui/`: working copy of `~/roomeq-ui/`. Edit here, then `scp` to the Pi.
-- `pi/`: reference copies of Pi files (`pi/camilladsp/room_eq.yml`, later the
+- `pi/`: reference copies of Pi files (`pi/camilladsp/Room_curve.yml`, later the
   reconnect script and sudoers file).
 - `assets/logos/`: logo candidates (plain and `_transparent` PNGs) and the
   active `joshs_eq.png`; `assets/backgrounds/`: generated backgrounds.
@@ -42,10 +42,14 @@ CamillaDSP, and sends it to the KEFs over USB. A custom touchscreen/phone UI
   compares REW text exports and averages positions; `scripts/design_peq.py`
   fits cut-only peaking filters to an average (scipy least squares).
 - rew_v1 (2026-10-03): 4 cuts, 20.9 Hz -2.8, 39.6 Hz -4.7, 50.1 Hz -3.8,
-  66.7 Hz -6.9 dB, all Q 5, preamp 0. File `~/camilladsp/configs/rew_v1.yml`
+  66.7 Hz -6.9 dB, all Q 5, preamp 0. File `~/camilladsp/configs/Room_curve.yml` (named
+  `rew_v1.yml` until 2026-10-29)
   (copy in `pi/camilladsp/`). Data in `measurements/2026-10-03_*`.
-- REW filter export goes into a new preset (e.g. `rew_v1.yml`) next to
-  `room_eq.yml`, with the preamp covering the largest boost.
+- REW filter export goes into a new preset next to `Room_curve.yml`, with the preamp covering the
+  largest boost.
+- Presets (2026-10-29, user): `rew_v1.yml` renamed to `Room_curve.yml`, the only preset now.
+  The old hand-set `room_eq.yml` (boosts: low shelf 100 Hz +6.5, 50 Hz +3, 200 Hz +2.5, 5 kHz +5)
+  was removed. Old files moved to `~/camilladsp/configs_removed_2026-10-29/`.
 
 ## Josh's EQ Pocket: phone measurement page (2026-10-19)
 
@@ -263,7 +267,7 @@ Gadget setup:
 - Service `camilladsp.service`:
   `camilladsp -s ~/camilladsp/statefile.yml -w -p 1234 -o ~/camilladsp/camilladsp.log`
   (runs as `joshi`, FIFO priority 10).
-- Configs in `~/camilladsp/configs/`. Active: `room_eq.yml` (v4 format).
+- Configs in `~/camilladsp/configs/`. Active and only preset: `Room_curve.yml` (v4 format).
 - Devices: samplerate 192000, chunksize 1024, rate adjust on, no resampler
   (fixed 2026-10-03).
 - Current filters (placeholders until REW measurements). Names contain spaces:
