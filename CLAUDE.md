@@ -410,7 +410,16 @@ Shield debloat (2026-10-27, Android 11, from the PC with `pm uninstall --user 0`
   `~/shield-wakelog/wakes.log` (each wake + 60 lines before it). Start:
   `nohup setsid ~/bin/shield-wakelog >/dev/null 2>&1 </dev/null &`; stop: `kill` the PID in
   `~/shield-wakelog/pid` and its adb/mawk children. Overlay on: log and process are gone after a
-  Pi reboot. Needs `mawk -W interactive` (mawk buffers piped input).
+  Pi reboot. Needs `mawk -W interactive` (mawk buffers piped input). Stop it with
+  `kill -- -<pid>` (setsid makes the PID the process group, so adb and mawk stop too).
+- 2026-10-29 02:41 wake: Prime Video was left in front at sleep, exited itself, Android restarted
+  it as the top activity and its turnScreenOn woke the TV. Cause: the stock launcher used to come
+  to the front at each sleep; with it disabled, the last app stays in front.
+  Fix (user's choice, way 3): the logger runs `pi/bin/shield-sleephome` at each "Going to sleep".
+  After 5 s, if the Shield is Asleep/Dozing, it opens Home (Projectivy); if the Shield woke, it
+  sends KEYCODE_SLEEP. Each run logs a `sleephome:` line in `wakes.log`. Works only while the
+  Pi and the logger run. Other ways: re-enable tvlauncher + tvrecommendations and use
+  Projectivy's "Override current launcher", or an automation app on the Shield.
 
 ## Touchscreen kiosk
 

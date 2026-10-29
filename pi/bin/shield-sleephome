@@ -1,0 +1,28 @@
+#!/bin/bash
+# Called by shield-wakelog each time the Shield goes to sleep: opens Home, so no app stays in front.
+# An app left in front can wake the Shield: if its process dies, Android restarts it as the top
+# activity, and its turnScreenOn flag turns the TV on. The stock launcher did this step before.
+# Acts only while the Shield is asleep, so a replayed old log line never disturbs viewing.
+HOST=${1:-192.168.110.211:5555}
+LOG=${2:-$HOME/shield-wakelog/wakes.log}
+exec 9>"$(dirname "$LOG")/sleephome.lock"
+flock -n 9 || exit 0
+say() { echo "$(date '+%F %T') sleephome: $*" >> "$LOG"; }
+state() { adb -s "$HOST" shell dumpsys power 2>/dev/null | grep -m1 -o 'mWakefulness=[A-Za-z]*' | cut -d= -f2; }
+
+sleep 5
+s=$(state)
+case "$s" in
+  Asleep|Dozing) ;;
+  *) say "skipped (Shield is ${s:-unreachable})"; exit 0 ;;
+esac
+top=$(adb -s "$HOST" shell dumpsys activity activities 2>/dev/null | grep -m1 -o 'mFocusedApp=.*' | grep -o '[a-z0-9_.]*/[A-Za-z0-9_.$]*')
+adb -s "$HOST" shell am start -a android.intent.action.MAIN -c android.intent.category.HOME >/dev/null 2>&1
+sleep 2
+s=$(state)
+if [ "$s" = Awake ]; then
+  adb -s "$HOST" shell input keyevent KEYCODE_SLEEP
+  say "Home opened (was ${top:-?}); the Shield woke, so it was put back to sleep"
+else
+  say "Home opened (was ${top:-?}), Shield still $s"
+fi

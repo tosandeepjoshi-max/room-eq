@@ -1,6 +1,7 @@
 #!/bin/bash
 # Records what wakes the Shield. Runs on the Pi; reading logcat over ADB does not wake it.
 # Each wake goes to wakes.log with the 60 log lines before it; sleeps are logged too.
+# Each sleep also runs shield-sleephome (same folder), which opens Home on the Shield.
 # Start:  nohup setsid ~/bin/shield-wakelog >/dev/null 2>&1 </dev/null &
 # Stop:   kill $(cat ~/shield-wakelog/pid)
 HOST=${1:-192.168.110.211:5555}
@@ -15,7 +16,8 @@ while true; do
     # Resume from the last line seen, so a dropped link loses nothing.
     if [ -s "$OUT/last" ]; then since=$(cat "$OUT/last"); else since=1; fi
     echo "$(date '+%F %T') connected (from: $since)" >> "$LOG"
-    adb -s "$HOST" logcat -b all -v time -T "$since" 2>/dev/null | mawk -W interactive -v logf="$LOG" -v last="$OUT/last" '
+    adb -s "$HOST" logcat -b all -v time -T "$since" 2>/dev/null | mawk -W interactive -v logf="$LOG" -v last="$OUT/last" \
+        -v hook="$(dirname "$0")/shield-sleephome $HOST $LOG" '
       /adbd|chatty|glide-source|ANQPRequestManager/ { next }
       {
         buf[n % 60] = $0; n++
@@ -30,7 +32,8 @@ while true; do
       }
       /Going to sleep|HdmiControlService.*(ActiveSource|Image View On|Text View On|oneTouchPlay)/ {
         print $0 >> logf; fflush(logf)
-      }'
+      }
+      /Going to sleep/ { system(hook " </dev/null >/dev/null 2>&1 &") }'
     echo "$(date '+%F %T') logcat ended" >> "$LOG"
   fi
   sleep 30
