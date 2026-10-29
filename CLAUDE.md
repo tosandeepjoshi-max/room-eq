@@ -213,7 +213,9 @@ Gadget setup:
   (the `[cm4]`/`[cm5]`/`[pi5]` sections above it do not apply to a Pi 4).
 - `/etc/modules`: `dwc2` and `g_audio`.
 - `/etc/modprobe.d/usb_g_audio.conf`:
-  `options g_audio c_srate=192000 c_ssize=4 c_chmask=3 p_chmask=0`
+  `options g_audio c_srate=192000 c_ssize=4 c_chmask=3 p_chmask=0 iManufacturer=JoshEQ iProduct="JoshEQ DSP"`
+  (name added 2026-10-29: the Shield lists "USB-Audio - JoshEQ DSP" instead of "Linux USB Audio
+  Gadget"; the Pi-side ALSA card stays `UAC2Gadget`. Applied with roomeq-reconnect.)
 - Gadget max buffer is 8192 frames, so keep chunksize at 1024.
 - Connection state: `cat /sys/class/udc/*/state` (`configured` = Shield attached).
 - Is the Shield sending? `amixer -c UAC2Gadget cget iface=PCM,name='Capture Rate'`
