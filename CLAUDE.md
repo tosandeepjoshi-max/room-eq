@@ -467,7 +467,7 @@ reset): moved to its own project `Projects/personal/shield` on 2026-10-29 (compl
 - `tail -20 ~/camilladsp/camilladsp.log`
 - `aplay -l` (KEF = `Speaker`), `arecord -l` (gadget = `UAC2Gadget`)
 - `vcgencmd get_throttled` (want `0x0`), `vcgencmd measure_temp` (~56 C normal)
-- Pi status at handover: throttled 0x0, 56 C.
+- Pi status at handover: throttled 0x0, 56 C (open board). With the back plate (2026-10-29): 46 C, 1800 MHz.
 
 ## Open items
 
