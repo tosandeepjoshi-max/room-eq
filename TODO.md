@@ -15,6 +15,7 @@ user plans a Pi heatsink and a closed case (watch CPU temp, ~56 C open).
 - [ ] miniDSP: after the AT45 is back, plug the miniDSP into the PC and try the XMOS DFU revert-to-factory request over USB (see CLAUDE.md).
 - [ ] User: resolder the AT45 unchanged (pin 1 at the board's marking) #you
 - [ ] User: if the Shield wakes by itself again, do not unplug it; ask Claude to read `~/shield-wakelog/wakes.log` on the Pi #you
+- [ ] Shield sleep = Home + sleep without the Pi: today `pi/bin/shield-sleephome` (run by the Pi wake logger) does it and stops on a Pi reboot. Options: re-enable tvlauncher + tvrecommendations and turn on Projectivy's "Override current launcher", or an automation app on the Shield (screen off -> Home).
 - [x] Room check from the Pi: scripts/pi_sweep.py + compare_room.py; Flat vs Room EQ measured 2026-10-27.
 - [ ] User: KEF volume test (Flat sweep at a clearly lower KEF volume) to see whether the sub follows the KEF volume #you
 - [x] Bass slider on the Pi UI (low shelf under 80 Hz, -12..+6 dB), deployed to RAM 2026-10-27.
